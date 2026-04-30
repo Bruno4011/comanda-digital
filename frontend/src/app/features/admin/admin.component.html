@@ -1,0 +1,541 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-logo">🍽️ <span>Admin</span></div>
+    <nav>
+      <button [class.active]="tab==='dashboard'"  (click)="setTab('dashboard')">🖥️ Operações</button>
+      <button [class.active]="tab==='financeiro'" (click)="setTab('financeiro')">📈 Financeiro</button>
+      <button [class.active]="tab==='produtos'"   (click)="setTab('produtos')">🍔 Produtos</button>
+      <button [class.active]="tab==='mesas'"      (click)="setTab('mesas')">🪑 Mesas</button>
+      <button [class.active]="tab==='historico'"  (click)="setTab('historico')">📋 Histórico</button>
+    </nav>
+    <div class="sb-user">
+      <div class="sb-user-name">{{ user?.nome }}</div>
+      <button class="btn-secondary" (click)="logout()">Sair</button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <!-- ===== OPERAÇÕES (DASHBOARD) ===== -->
+    <div *ngIf="tab==='dashboard'" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">🖥️ Central de Operações</h2>
+          <div class="page-subtitle">Monitoramento em tempo real · Atualizado às {{ ultimaAtualizacao }}</div>
+        </div>
+        <button class="btn-secondary" style="padding:8px 16px;font-size:13px" (click)="loadDashboard()">🔄 Atualizar</button>
+      </div>
+
+      <!-- KPIs do dia -->
+      <div class="kpi-row">
+        <div class="kpi-mini" [class.kpi-alert]="comandasAbertas.length > 5">
+          <div class="kpi-mini-val">{{ comandasAbertas.length }}</div>
+          <div class="kpi-mini-label">Abertas agora</div>
+        </div>
+        <div class="kpi-mini kpi-yellow">
+          <div class="kpi-mini-val">{{ relatorio.totalComandas || 0 }}</div>
+          <div class="kpi-mini-label">Total hoje</div>
+        </div>
+        <div class="kpi-mini kpi-green">
+          <div class="kpi-mini-val">{{ relatorio.comandasFinalizadas || 0 }}</div>
+          <div class="kpi-mini-label">Finalizadas</div>
+        </div>
+        <div class="kpi-mini kpi-accent">
+          <div class="kpi-mini-val">{{ formatMoeda(relatorio.faturamentoTotal) }}</div>
+          <div class="kpi-mini-label">Faturamento hoje</div>
+        </div>
+        <div class="kpi-mini">
+          <div class="kpi-mini-val">{{ formatMoeda(relatorio.ticketMedio) }}</div>
+          <div class="kpi-mini-label">Ticket médio</div>
+        </div>
+        <div class="kpi-mini" [class.kpi-alert]="(relatorio.taxaCancelamento||0) > 10">
+          <div class="kpi-mini-val">{{ formatPct(relatorio.taxaCancelamento) }}</div>
+          <div class="kpi-mini-label">Cancelamentos</div>
+        </div>
+      </div>
+
+      <div class="ops-grid" [class.ops-grid-4]="comandasProntas.length > 0">
+
+        <!-- ABERTAS -->
+        <div class="card">
+          <div class="ops-header">
+            <h3>🔴 Aguardando Preparo</h3>
+            <span class="ops-count">{{ comandasAbertas.length }}</span>
+          </div>
+          <div *ngIf="!comandasAbertas.length" class="empty" style="padding:24px">Nenhuma comanda aguardando.</div>
+          <div class="ops-item" *ngFor="let c of comandasAbertas">
+            <div class="ops-item-top">
+              <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</div>
+              <span class="ops-tempo" [class]="tempoClass(c.abertaEm)">⏱ {{ tempoAberta(c.abertaEm) }}</span>
+            </div>
+            <div class="ops-itens">
+              <span *ngFor="let it of c.itens" class="ops-it">{{ it.quantidade }}× {{ it.produto?.nome }}</span>
+            </div>
+            <div class="ops-footer">
+              <span class="mono" style="color:var(--text2);font-size:12px">#{{ c.id }}</span>
+              <span class="ops-val">{{ formatMoeda(c.total) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- EM PREPARO -->
+        <div class="card">
+          <div class="ops-header">
+            <h3>🟡 Em Preparo</h3>
+            <span class="ops-count ops-count-yellow">{{ comandasEmPreparo.length }}</span>
+          </div>
+          <div *ngIf="!comandasEmPreparo.length" class="empty" style="padding:24px">Nenhuma em preparo.</div>
+          <div class="ops-item ops-item-preparo" *ngFor="let c of comandasEmPreparo">
+            <div class="ops-item-top">
+              <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</div>
+              <span class="ops-tempo" [class]="tempoClass(c.abertaEm)">⏱ {{ tempoAberta(c.abertaEm) }}</span>
+            </div>
+            <div class="ops-itens">
+              <span *ngFor="let it of c.itens" class="ops-it">{{ it.quantidade }}× {{ it.produto?.nome }}</span>
+            </div>
+            <div class="ops-footer">
+              <span class="mono" style="color:var(--text2);font-size:12px">#{{ c.id }}</span>
+              <span class="ops-val">{{ formatMoeda(c.total) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRONTAS PARA ENTREGA -->
+        <div class="card" *ngIf="comandasProntas.length > 0">
+          <div class="ops-header">
+            <h3>✅ Prontas para Entrega</h3>
+            <span class="ops-count" style="background:var(--blue)">{{ comandasProntas.length }}</span>
+          </div>
+          <div class="ops-item" style="border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.04)" *ngFor="let c of comandasProntas">
+            <div class="ops-item-top">
+              <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcao' }}</div>
+              <span class="ops-tempo tempo-ok">⏱ {{ tempoAberta(c.abertaEm) }}</span>
+            </div>
+            <div class="ops-itens">
+              <span *ngFor="let it of c.itens" class="ops-it">{{ it.quantidade }}x {{ it.produto?.nome }}</span>
+            </div>
+            <div class="ops-footer">
+              <span class="mono" style="color:var(--text2);font-size:12px">#{{ c.id }} · {{ formatMoeda(c.total) }}</span>
+              <button class="btn-success" style="padding:4px 12px;font-size:12px" (click)="finalizarComanda(c.id)">Finalizar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATUS MESAS -->
+        <div class="card">
+          <div class="ops-header">
+            <h3>🪑 Status das Mesas</h3>
+            <button class="btn-secondary" style="padding:4px 10px;font-size:12px" (click)="setTab('mesas')">↻</button>
+          </div>
+          <div class="mesas-mini-grid">
+            <div class="mesa-mini" *ngFor="let m of mesas"
+                 [class.mesa-livre]="m.status==='LIVRE'"
+                 [class.mesa-ocupada]="m.status==='OCUPADA'">
+              <div class="mesa-mini-num">{{ m.numero }}</div>
+              <div class="mesa-mini-status">{{ m.status }}</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== FINANCEIRO ===== -->
+    <div *ngIf="tab==='financeiro'" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">📈 Painel Financeiro</h2>
+          <div class="page-subtitle">Análise de receita e performance por período</div>
+        </div>
+      </div>
+
+      <!-- Filtro período -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="margin:0;flex:1;min-width:140px">
+            <label>De</label><input type="date" [(ngModel)]="finInicio">
+          </div>
+          <div class="form-group" style="margin:0;flex:1;min-width:140px">
+            <label>Até</label><input type="date" [(ngModel)]="finFim">
+          </div>
+          <button class="btn-primary" style="padding:10px 28px" (click)="buscarFinanceiro()">
+            {{ finCarregando ? 'Analisando...' : '📊 Analisar Período' }}
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="finCarregando" class="loading">Calculando métricas financeiras...</div>
+
+      <div *ngIf="finRelatorio">
+
+        <!-- KPIs financeiros -->
+        <div class="fin-kpi-grid">
+          <div class="fin-kpi primary">
+            <div class="fin-kpi-icon">💰</div>
+            <div class="fin-kpi-val">{{ formatMoeda(finRelatorio.faturamentoTotal) }}</div>
+            <div class="fin-kpi-label">Receita Total</div>
+          </div>
+          <div class="fin-kpi">
+            <div class="fin-kpi-icon">🎫</div>
+            <div class="fin-kpi-val">{{ formatMoeda(finRelatorio.ticketMedio) }}</div>
+            <div class="fin-kpi-label">Ticket Médio</div>
+          </div>
+          <div class="fin-kpi">
+            <div class="fin-kpi-icon">📦</div>
+            <div class="fin-kpi-val">{{ finRelatorio.totalItensVendidos }}</div>
+            <div class="fin-kpi-label">Itens Vendidos</div>
+          </div>
+          <div class="fin-kpi green">
+            <div class="fin-kpi-icon">✅</div>
+            <div class="fin-kpi-val">{{ formatPct(finRelatorio.taxaConversao) }}</div>
+            <div class="fin-kpi-label">Conversão</div>
+          </div>
+          <div class="fin-kpi" [class.red]="finRelatorio.taxaCancelamento > 10">
+            <div class="fin-kpi-icon">❌</div>
+            <div class="fin-kpi-val">{{ formatPct(finRelatorio.taxaCancelamento) }}</div>
+            <div class="fin-kpi-label">Cancelamento</div>
+          </div>
+          <div class="fin-kpi">
+            <div class="fin-kpi-icon">🧾</div>
+            <div class="fin-kpi-val">{{ finRelatorio.comandasFinalizadas }}</div>
+            <div class="fin-kpi-label">Pedidos Fechados</div>
+          </div>
+        </div>
+
+        <!-- Gráfico faturamento diário -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <h3>📊 Evolução do Faturamento</h3>
+            <div class="btn-group">
+              <button [class.active]="graficoDias===7"  (click)="setGraficoDias(7)">7 dias</button>
+              <button [class.active]="graficoDias===14" (click)="setGraficoDias(14)">14 dias</button>
+              <button [class.active]="graficoDias===30" (click)="setGraficoDias(30)">30 dias</button>
+            </div>
+          </div>
+          <div class="bar-chart">
+            <div class="bar-col" *ngFor="let d of faturamentoDiario">
+              <div class="bar-wrap">
+                <div class="bar-tooltip">{{ formatMoeda(d.faturamento) }}<br>{{ d.comandas }} pedidos</div>
+                <div class="bar" [style.height.%]="barHeight(d.faturamento)" [class.bar-zero]="d.faturamento == 0"></div>
+              </div>
+              <div class="bar-label">{{ d.data }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="gap:20px;margin-bottom:20px">
+          <!-- Top produtos -->
+          <div class="card">
+            <h3 style="margin-bottom:20px;font-size:15px">🏆 Produtos Mais Vendidos</h3>
+            <div *ngIf="!finRelatorio.topProdutos?.length" class="empty">Sem vendas no período.</div>
+            <div class="rank-item" *ngFor="let p of finRelatorio.topProdutos; let i = index">
+              <div class="rank-pos" [class]="'rank-' + (i+1)">{{ i + 1 }}º</div>
+              <div class="rank-info">
+                <div class="rank-nome">{{ p.nome }}</div>
+                <div class="rank-bar-wrap">
+                  <div class="rank-bar" [style.width.%]="prodBarWidth(p.quantidade)"></div>
+                </div>
+              </div>
+              <div class="rank-stats">
+                <div class="rank-qty">{{ p.quantidade }} un.</div>
+                <div class="rank-rev">{{ formatMoeda(p.receita) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Horários de pico -->
+          <div class="card">
+            <h3 style="margin-bottom:20px;font-size:15px">🕐 Distribuição por Hora</h3>
+            <div *ngIf="!finRelatorio.distribuicaoHoraria?.length" class="empty">Sem dados no período.</div>
+            <div class="hora-item" *ngFor="let h of finRelatorio.distribuicaoHoraria">
+              <span class="hora-label mono">{{ h.hora }}</span>
+              <div class="hora-bar-wrap">
+                <div class="hora-bar" [style.width.%]="barHeight(h.faturamento)"></div>
+              </div>
+              <span class="hora-val">{{ formatMoeda(h.faturamento) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumo executivo -->
+        <div class="card">
+          <h3 style="margin-bottom:16px;font-size:15px">📋 Resumo do Período</h3>
+          <div class="exec-grid">
+            <div class="exec-item"><div class="exec-label">Total de Pedidos</div><div class="exec-val">{{ finRelatorio.totalComandas }}</div></div>
+            <div class="exec-item"><div class="exec-label">Finalizados</div><div class="exec-val green">{{ finRelatorio.comandasFinalizadas }}</div></div>
+            <div class="exec-item"><div class="exec-label">Cancelados</div><div class="exec-val red">{{ finRelatorio.comandasCanceladas }}</div></div>
+            <div class="exec-item"><div class="exec-label">Em Aberto</div><div class="exec-val orange">{{ finRelatorio.comandasAbertas }}</div></div>
+            <div class="exec-item"><div class="exec-label">Receita Total</div><div class="exec-val">{{ formatMoeda(finRelatorio.faturamentoTotal) }}</div></div>
+            <div class="exec-item"><div class="exec-label">Ticket Médio</div><div class="exec-val">{{ formatMoeda(finRelatorio.ticketMedio) }}</div></div>
+            <div class="exec-item"><div class="exec-label">Taxa de Conversão</div><div class="exec-val green">{{ formatPct(finRelatorio.taxaConversao) }}</div></div>
+            <div class="exec-item"><div class="exec-label">Taxa Cancelamento</div><div class="exec-val" [class.red]="finRelatorio.taxaCancelamento > 10">{{ formatPct(finRelatorio.taxaCancelamento) }}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PRODUTOS ===== -->
+    <div *ngIf="tab==='produtos'" class="page">
+      <h2 class="page-title">Produtos</h2>
+      <div class="grid-2" style="gap:24px">
+        <div class="card">
+          <h3 style="margin-bottom:16px">{{ editando ? 'Editar' : 'Novo Produto' }}</h3>
+          <div class="form-group"><label>Nome</label><input [(ngModel)]="novoProduto.nome" placeholder="Nome"></div>
+          <div class="form-group"><label>Descrição</label><textarea [(ngModel)]="novoProduto.descricao" rows="2"></textarea></div>
+          <div class="form-group"><label>Preço (R$)</label><input type="number" step="0.01" [(ngModel)]="novoProduto.preco"></div>
+          <div class="form-group"><label>Categoria</label>
+            <select [(ngModel)]="novoProduto.categoriaId">
+              <option [ngValue]="null">Selecione...</option>
+              <option *ngFor="let c of categorias" [ngValue]="c.id">{{ c.nome }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>URL da Imagem</label>
+            <input [(ngModel)]="novoProduto.imagemUrl" placeholder="https://...">
+            <div *ngIf="novoProduto.imagemUrl" style="margin-top:8px;border-radius:8px;overflow:hidden;height:100px;background:var(--bg3)">
+              <img [src]="novoProduto.imagemUrl" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+            </div>
+          </div>
+          <div class="form-group"><label>Disponível</label>
+            <select [(ngModel)]="novoProduto.disponivel">
+              <option [ngValue]="true">Sim</option><option [ngValue]="false">Não</option>
+            </select>
+          </div>
+          <div *ngIf="produtoErro" class="alert alert-error" style="margin-bottom:12px">{{ produtoErro }}</div>
+          <div *ngIf="produtoSucesso" class="alert alert-success" style="margin-bottom:12px">✅ {{ produtoSucesso }}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" (click)="salvarProduto()">{{ editando ? 'Atualizar' : 'Salvar' }}</button>
+            <button *ngIf="editando" class="btn-secondary" (click)="editando=null;novoProduto={nome:'',descricao:'',preco:0,categoriaId:null,disponivel:true,imagemUrl:''}">Cancelar</button>
+          </div>
+        </div>
+        <div class="card" style="overflow-y:auto;max-height:600px">
+          <table>
+            <thead><tr><th>Img</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Ativo</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of produtos">
+                <td>
+                  <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px">
+                    <img *ngIf="p.imagemUrl" [src]="p.imagemUrl" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+                    <span *ngIf="!p.imagemUrl">🍽️</span>
+                  </div>
+                </td>
+                <td>{{ p.nome }}</td>
+                <td>{{ formatMoeda(p.preco) }}</td>
+                <td>{{ p.categoria?.nome }}</td>
+                <td><span class="badge" [class]="p.disponivel ? 'badge-green' : 'badge-red'">{{ p.disponivel ? 'Sim' : 'Não' }}</span></td>
+                <td>
+                  <button class="btn-secondary" style="padding:4px 10px;font-size:12px;margin-right:4px" (click)="editarProduto(p)">✏️</button>
+                  <button class="btn-danger" style="padding:4px 10px;font-size:12px" (click)="deletarProduto(p.id)">🗑️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MESAS ===== -->
+    <div *ngIf="tab==='mesas'" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Mesas</h2>
+          <div class="page-subtitle">Clique em uma mesa para alternar o status manualmente</div>
+        </div>
+        <button class="btn-secondary" style="padding:8px 16px;font-size:13px" (click)="loadMesas()">🔄 Atualizar</button>
+      </div>
+      <div class="mesas-grid">
+        <div class="mesa-big-card"
+             *ngFor="let m of mesas"
+             [class.mesa-livre]="m.status==='LIVRE'"
+             [class.mesa-ocupada]="m.status==='OCUPADA'"
+             [class.mesa-reservada]="m.status==='RESERVADA'"
+             (click)="toggleMesa(m)">
+          <div class="mesa-big-icon">🪑</div>
+          <div class="mesa-big-num">Mesa {{ m.numero }}</div>
+          <span class="badge" [class]="m.status==='LIVRE' ? 'badge-green' : m.status==='OCUPADA' ? 'badge-red' : 'badge-yellow'">
+            {{ m.status }}
+          </span>
+          <div class="mesa-toggle-hint">{{ m.status === 'LIVRE' ? 'Clique para ocupar' : 'Clique para liberar' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HISTÓRICO ===== -->
+    <div *ngIf="tab==='historico'" class="page">
+      <h2 class="page-title">Histórico de Comandas</h2>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="margin:0;flex:1;min-width:140px">
+            <label>Data Início</label><input type="date" [(ngModel)]="dataInicio">
+          </div>
+          <div class="form-group" style="margin:0;flex:1;min-width:140px">
+            <label>Data Fim</label><input type="date" [(ngModel)]="dataFim">
+          </div>
+          <button class="btn-primary" style="padding:10px 28px" (click)="buscarHistorico()">
+            {{ historicoCarregando ? 'Buscando...' : 'Buscar' }}
+          </button>
+        </div>
+        <div *ngIf="historico.length > 0" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+          <span class="stat-pill">📋 {{ historico.length }} comanda(s)</span>
+          <span class="stat-pill green">💰 {{ formatMoeda(totalHistorico) }}</span>
+          <span class="stat-pill red">❌ {{ historicoCanceladas }} cancelada(s)</span>
+        </div>
+      </div>
+      <div *ngIf="historicoErro && !historicoCarregando" class="alert alert-error">{{ historicoErro }}</div>
+      <div *ngIf="historicoCarregando" class="loading">Buscando...</div>
+      <div class="card" *ngIf="historico.length > 0">
+        <table>
+          <thead><tr><th>#</th><th>Mesa</th><th>Usuário</th><th>Status</th><th>Itens</th><th>Total</th><th>Abertura</th><th>Fechamento</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of historico">
+              <td class="mono">#{{ c.id }}</td>
+              <td>{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</td>
+              <td>{{ c.usuario?.nome }}</td>
+              <td><span class="badge" [class]="statusClass(c.status)">{{ c.status }}</span></td>
+              <td>{{ c.itens?.length || 0 }}</td>
+              <td><strong>{{ formatMoeda(c.total) }}</strong></td>
+              <td class="text-muted">{{ formatData(c.abertaEm) }}</td>
+              <td class="text-muted">{{ c.fechadaEm ? formatData(c.fechadaEm) : '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<style>
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 12px;position:sticky;top:0;height:100vh}
+.sb-logo{font-size:18px;font-weight:700;padding:8px 12px;margin-bottom:24px}
+.sb-logo span{color:var(--accent)}
+nav{display:flex;flex-direction:column;gap:4px;flex:1}
+nav button{text-align:left;padding:10px 12px;background:none;border-radius:8px;color:var(--text2);width:100%}
+nav button:hover{background:var(--bg3);color:var(--text)}
+nav button.active{background:rgba(255,107,53,.12);color:var(--accent);font-weight:600}
+.sb-user{border-top:1px solid var(--border);padding-top:16px}
+.sb-user-name{font-size:13px;color:var(--text2);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.content{flex:1;overflow:auto}
+.page{padding:28px}
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-subtitle{font-size:13px;color:var(--text2)}
+
+/* KPIs operacionais */
+.kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.kpi-mini{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;flex:1;min-width:120px;text-align:center}
+.kpi-mini-val{font-size:22px;font-weight:700;margin-bottom:4px}
+.kpi-mini-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.kpi-mini.kpi-alert{border-color:var(--red);background:rgba(239,68,68,.06)}
+.kpi-mini.kpi-alert .kpi-mini-val{color:var(--red)}
+.kpi-mini.kpi-green .kpi-mini-val{color:var(--green)}
+.kpi-mini.kpi-yellow .kpi-mini-val{color:var(--yellow)}
+.kpi-mini.kpi-accent .kpi-mini-val{color:var(--accent)}
+
+/* Grid operacional */
+.ops-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.ops-grid-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.ops-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.ops-header h3{font-size:14px;font-weight:600}
+.ops-count{background:var(--red);color:#fff;border-radius:20px;padding:2px 10px;font-size:13px;font-weight:700}
+.ops-count-yellow{background:var(--yellow);color:#000}
+.ops-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.ops-item-preparo{border-color:rgba(234,179,8,.3);background:rgba(234,179,8,.04)}
+.ops-item-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.ops-mesa{font-size:15px;font-weight:700}
+.ops-tempo{font-size:12px;font-weight:600}
+.tempo-ok{color:var(--green)}
+.tempo-alerta{color:var(--yellow)}
+.tempo-urgente{color:var(--red)}
+.ops-itens{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.ops-it{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px}
+.ops-footer{display:flex;justify-content:space-between;align-items:center}
+.ops-val{font-size:14px;font-weight:700;color:var(--accent)}
+
+/* Mesas mini */
+.mesas-mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px}
+.mesa-mini{border-radius:8px;padding:10px 6px;text-align:center;border:1px solid var(--border)}
+.mesa-mini.mesa-livre{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3)}
+.mesa-mini.mesa-ocupada{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3)}
+.mesa-mini-num{font-size:16px;font-weight:700}
+.mesa-mini-status{font-size:9px;color:var(--text2);text-transform:uppercase;margin-top:2px}
+
+/* KPIs financeiros */
+.fin-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.fin-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center}
+.fin-kpi.primary{border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.06)}
+.fin-kpi.green .fin-kpi-val{color:var(--green)}
+.fin-kpi.red .fin-kpi-val{color:var(--red)}
+.fin-kpi-icon{font-size:24px;margin-bottom:8px}
+.fin-kpi-val{font-size:22px;font-weight:700;margin-bottom:4px}
+.fin-kpi-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+
+/* Gráfico */
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.card-header h3{font-size:15px;font-weight:600}
+.btn-group{display:flex;gap:4px}
+.btn-group button{padding:5px 12px;font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer}
+.btn-group button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:160px;padding:0 4px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.bar-col:hover .bar-tooltip{opacity:1}
+.bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end;position:relative}
+.bar-tooltip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none;z-index:10;text-align:center}
+.bar{width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:4px;transition:height .3s}
+.bar-zero{background:var(--bg3)}
+.bar-label{font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-align:center;width:100%}
+
+/* Ranking */
+.rank-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.rank-item:last-child{border:none}
+.rank-pos{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.rank-1{background:rgba(251,191,36,.2);color:#fbbf24}
+.rank-2{background:rgba(156,163,175,.2);color:#9ca3af}
+.rank-3{background:rgba(180,100,60,.2);color:#b4643c}
+.rank-4,.rank-5{background:var(--bg3);color:var(--text2)}
+.rank-info{flex:1;min-width:0}
+.rank-nome{font-size:14px;font-weight:500;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-bar-wrap{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.rank-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+.rank-stats{text-align:right;flex-shrink:0}
+.rank-qty{font-size:13px;font-weight:600}
+.rank-rev{font-size:12px;color:var(--text2)}
+
+/* Horários */
+.hora-item{display:flex;align-items:center;gap:10px;padding:6px 0}
+.hora-label{font-size:13px;width:36px;flex-shrink:0;color:var(--text2)}
+.hora-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.hora-bar{height:100%;background:linear-gradient(90deg,var(--accent),#ff8c42);border-radius:4px;transition:width .4s}
+.hora-val{font-size:12px;color:var(--text2);width:100px;text-align:right;flex-shrink:0}
+
+/* Resumo */
+.exec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.exec-item{background:var(--bg3);border-radius:10px;padding:14px}
+.exec-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.exec-val{font-size:20px;font-weight:700}
+.exec-val.green{color:var(--green)}
+.exec-val.red{color:var(--red)}
+.exec-val.orange{color:var(--accent)}
+
+/* Misc */
+.stat-pill{font-size:13px;padding:4px 12px;background:var(--bg3);border-radius:20px}
+.stat-pill.green{color:var(--green)}
+.stat-pill.red{color:var(--red)}
+.mesa-card{text-align:center;padding:24px}
+.mesa-num{font-size:20px;font-weight:700;margin-bottom:8px}
+.mesas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+.mesa-big-card{background:var(--bg2);border:2px solid var(--border);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s}
+.mesa-big-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.mesa-big-card.mesa-livre{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.04)}
+.mesa-big-card.mesa-ocupada{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.04)}
+.mesa-big-card.mesa-reservada{border-color:rgba(234,179,8,.4);background:rgba(234,179,8,.04)}
+.mesa-big-icon{font-size:32px;margin-bottom:8px}
+.mesa-big-num{font-size:18px;font-weight:700;margin-bottom:8px}
+.mesa-toggle-hint{font-size:11px;color:var(--text2);margin-top:8px}
+.text-muted{color:var(--text2);font-size:13px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr}
+.grid-4{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+@media(max-width:1100px){.ops-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}.ops-grid{grid-template-columns:1fr}.sidebar{width:180px}}
+</style>
