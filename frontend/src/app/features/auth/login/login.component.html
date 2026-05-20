@@ -1,5 +1,20 @@
 <div class="login-wrapper">
-  <div class="login-box">
+
+  <!-- TELA DE CARREGAMENTO -->
+  <div class="loading-screen" *ngIf="serverChecking">
+    <div class="loading-box">
+      <div class="loading-logo">🍽️</div>
+      <h2 class="loading-title">Comanda <span>Digital</span></h2>
+      <p class="loading-sub">Iniciando o servidor, aguarde...</p>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar" [style.width.%]="progresso"></div>
+      </div>
+      <p class="loading-hint">Isso pode levar até 60 segundos na primeira vez.</p>
+    </div>
+  </div>
+
+  <!-- TELA DE LOGIN -->
+  <div class="login-box" *ngIf="!serverChecking">
     <div class="logo">
       <div class="logo-icon">🍽️</div>
       <h1>Comanda <span>Digital</span></h1>
@@ -47,6 +62,21 @@
 
 <style>
 .login-wrapper { min-height:100vh; display:flex; align-items:center; justify-content:center; background: radial-gradient(ellipse at 50% 0%, rgba(255,107,53,.12) 0%, transparent 60%), var(--bg); }
+
+/* Loading screen */
+.loading-screen { display:flex; align-items:center; justify-content:center; width:100%; }
+.loading-box { text-align:center; padding:48px 40px; background:var(--bg2); border:1px solid var(--border); border-radius:20px; max-width:400px; width:100%; }
+.loading-logo { font-size:56px; margin-bottom:12px; animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+.loading-title { font-size:26px; font-weight:700; margin-bottom:8px; }
+.loading-title span { color:var(--accent); }
+.loading-sub { color:var(--text2); font-size:14px; margin-bottom:24px; }
+.loading-bar-wrap { height:6px; background:var(--bg3); border-radius:3px; overflow:hidden; margin-bottom:12px; }
+.loading-bar { height:100%; background:linear-gradient(90deg, var(--accent), #ff8c42); border-radius:3px; transition:width .5s ease; min-width:8px; animation: shimmer 1.5s ease infinite; }
+@keyframes shimmer { 0%{opacity:1} 50%{opacity:.7} 100%{opacity:1} }
+.loading-hint { font-size:12px; color:var(--text2); }
+
+/* Login box */
 .login-box { width:100%; max-width:440px; padding:40px; background:var(--bg2); border:1px solid var(--border); border-radius:16px; }
 .logo { text-align:center; margin-bottom:32px; }
 .logo-icon { font-size:48px; margin-bottom:12px; }
