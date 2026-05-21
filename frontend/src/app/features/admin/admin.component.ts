@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -8,10 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [CommonModule],
   templateUrl: './admin.component.html'
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent {
   user = this.auth.getUser();
-
   constructor(private auth: AuthService) {}
-
-  ngOnInit() {}
 }
