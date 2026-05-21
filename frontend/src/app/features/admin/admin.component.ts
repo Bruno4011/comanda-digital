@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
 
@@ -52,7 +51,7 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   private interval: any;
 
-  constructor(private auth: AuthService, private api: ApiService, private router: Router) {}
+  constructor(private auth: AuthService, private api: ApiService) {}
 
   ngOnInit() {
     const hoje = new Date();
@@ -76,26 +75,24 @@ export class AdminComponent implements OnInit, OnDestroy {
   // Dashboard
   loadDashboard() {
     this.ultimaAtualizacao = new Date().toLocaleTimeString('pt-BR');
-    this.api.get<any>('/relatorio/hoje').subscribe({ next: r => this.relatorio = r, error: () => {} });
-    this.api.get<any[]>('/comandas/abertas').subscribe({ next: r => {
-      this.comandasAbertas = r.filter((c: any) => c.status === 'ABERTA');
-      this.comandasEmPreparo = r.filter((c: any) => c.status === 'EM_PREPARO');
-      this.comandasProntas = r.filter((c: any) => c.status === 'PRONTA');
-    }, error: () => {} });
+    this.api.getRelatorioHoje().subscribe({ next: (r: any) => this.relatorio = r, error: () => {} });
+    this.api.getComandasAbertas().subscribe({ next: (r: any[]) => this.comandasAbertas = r, error: () => {} });
+    this.api.getComandasEmPreparo().subscribe({ next: (r: any[]) => this.comandasEmPreparo = r, error: () => {} });
+    this.api.getComandasProntas().subscribe({ next: (r: any[]) => this.comandasProntas = r, error: () => {} });
     this.loadMesas();
   }
 
   loadMesas() {
-    this.api.get<any[]>('/mesas').subscribe({ next: r => this.mesas = r, error: () => {} });
+    this.api.getMesas().subscribe({ next: (r: any[]) => this.mesas = r, error: () => {} });
   }
 
   finalizarComanda(id: number) {
-    this.api.put(`/comandas/${id}/fechar`, {}).subscribe({ next: () => this.loadDashboard(), error: () => {} });
+    this.api.atualizarStatusComanda(id, 'FINALIZADA').subscribe({ next: () => this.loadDashboard(), error: () => {} });
   }
 
   toggleMesa(m: any) {
     const novoStatus = m.status === 'LIVRE' ? 'OCUPADA' : 'LIVRE';
-    this.api.put(`/mesas/${m.id}`, { ...m, status: novoStatus }).subscribe({ next: () => this.loadMesas(), error: () => {} });
+    this.api.atualizarStatusMesa(m.id, novoStatus).subscribe({ next: () => this.loadMesas(), error: () => {} });
   }
 
   tempoAberta(data: string): string {
@@ -117,11 +114,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   buscarFinanceiro() {
     this.finCarregando = true;
     this.finRelatorio = null;
-    this.api.get<any>(`/relatorio/periodo?inicio=${this.finInicio}&fim=${this.finFim}`).subscribe({
-      next: r => {
+    this.api.getRelatorioPeriodo(this.finInicio, this.finFim).subscribe({
+      next: (r: any) => {
         this.finRelatorio = r;
         this.finCarregando = false;
-        this.maxFaturamento = r.faturamentoDiario?.reduce((a: number, b: any) => Math.max(a, b.faturamento), 0) || 0;
         this.maxProdQty = r.topProdutos?.[0]?.quantidade || 0;
         this.setGraficoDias(this.graficoDias);
       },
@@ -131,9 +127,13 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   setGraficoDias(dias: number) {
     this.graficoDias = dias;
-    const all: any[] = this.finRelatorio?.faturamentoDiario || [];
-    this.faturamentoDiario = all.slice(-dias);
-    this.maxFaturamento = this.faturamentoDiario.reduce((a, b) => Math.max(a, b.faturamento), 0);
+    this.api.getFaturamentoDiario(dias).subscribe({
+      next: (r: any[]) => {
+        this.faturamentoDiario = r;
+        this.maxFaturamento = r.reduce((a, b) => Math.max(a, b.faturamento), 0);
+      },
+      error: () => {}
+    });
   }
 
   barHeight(val: number): number {
@@ -146,8 +146,8 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   // Produtos
   loadProdutos() {
-    this.api.get<any[]>('/produtos').subscribe({ next: r => this.produtos = r, error: () => {} });
-    this.api.get<any[]>('/categorias').subscribe({ next: r => this.categorias = r, error: () => {} });
+    this.api.getProdutos().subscribe({ next: (r: any[]) => this.produtos = r, error: () => {} });
+    this.api.getCategorias().subscribe({ next: (r: any[]) => this.categorias = r, error: () => {} });
   }
 
   editarProduto(p: any) {
@@ -158,8 +158,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   salvarProduto() {
     this.produtoErro = ''; this.produtoSucesso = '';
     const req = this.editando
-      ? this.api.put(`/produtos/${this.editando.id}`, this.novoProduto)
-      : this.api.post('/produtos', this.novoProduto);
+      ? this.api.atualizarProduto(this.editando.id, this.novoProduto)
+      : this.api.criarProduto(this.novoProduto);
     req.subscribe({
       next: () => {
         this.produtoSucesso = this.editando ? 'Produto atualizado!' : 'Produto criado!';
@@ -173,17 +173,17 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   deletarProduto(id: number) {
     if (!confirm('Deletar produto?')) return;
-    this.api.delete(`/produtos/${id}`).subscribe({ next: () => this.loadProdutos(), error: () => {} });
+    this.api.deletarProduto(id).subscribe({ next: () => this.loadProdutos(), error: () => {} });
   }
 
   // Histórico
   buscarHistorico() {
     this.historicoCarregando = true; this.historicoErro = '';
-    this.api.get<any[]>(`/comandas/historico?inicio=${this.dataInicio}&fim=${this.dataFim}`).subscribe({
-      next: r => {
+    this.api.getHistorico(this.dataInicio, this.dataFim).subscribe({
+      next: (r: any[]) => {
         this.historico = r;
-        this.totalHistorico = r.reduce((a, c) => a + (c.total || 0), 0);
-        this.historicoCanceladas = r.filter(c => c.status === 'CANCELADA').length;
+        this.totalHistorico = r.reduce((a: number, c: any) => a + (c.total || 0), 0);
+        this.historicoCanceladas = r.filter((c: any) => c.status === 'CANCELADA').length;
         this.historicoCarregando = false;
       },
       error: () => { this.historicoErro = 'Erro ao buscar histórico.'; this.historicoCarregando = false; }
