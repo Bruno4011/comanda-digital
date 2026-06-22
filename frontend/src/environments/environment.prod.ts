@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://comanda-digital-backend-0jm2.onrender.com/api'
+  apiUrl: 'https://comanda-digital-x3gk.onrender.com//api'
 };
