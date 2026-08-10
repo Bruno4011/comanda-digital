@@ -1,0 +1,181 @@
+<div class="coz-layout">
+  <header class="coz-header">
+    <div class="header-left">
+      <span>🍳</span>
+      <strong>Cozinha</strong>
+      <span class="user-name">— {{ user?.nome }}</span>
+    </div>
+    <div class="header-right">
+      <div class="nova-badge" *ngIf="novaComanda">🔔 Nova comanda!</div>
+      <div class="sync-info">
+        <span class="sync-dot"></span>
+        <span>Atualizado às {{ ultimaAtualizacao }}</span>
+      </div>
+      <button class="btn-secondary" (click)="logout()">Sair</button>
+    </div>
+  </header>
+
+  <div class="coz-board">
+    <div *ngIf="comandas.length === 0" class="empty-state">
+      <div class="empty-icon">✅</div>
+      <div class="empty-title">Tudo em dia!</div>
+      <div class="empty-sub">Nenhuma comanda pendente no momento.</div>
+    </div>
+
+    <div class="comanda-ticket" *ngFor="let c of comandas"
+         [class.ticket-aberta]="c.status === 'ABERTA'"
+         [class.ticket-preparo]="c.status === 'EM_PREPARO'">
+
+      <div class="ticket-header">
+        <div class="ticket-id-mesa">
+          <span class="ticket-id mono">#{{ c.id }}</span>
+          <span class="ticket-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</span>
+        </div>
+        <div class="ticket-meta">
+          <span class="badge" [class]="statusClass(c.status)">{{ c.status | titlecase }}</span>
+          <span class="ticket-tempo" [class]="tempoClass(c.abertaEm)">⏱ {{ tempo(c.abertaEm) }}</span>
+        </div>
+      </div>
+
+      <div class="ticket-obs" *ngIf="c.observacoes">
+        <span>📝</span> {{ c.observacoes }}
+      </div>
+
+      <div class="ticket-itens">
+        <div class="ticket-item" *ngFor="let it of itensCozinha(c)">
+          <span class="it-qty">{{ it.quantidade }}×</span>
+          <div class="it-info">
+            <div class="it-nome">{{ it.produto?.nome }}</div>
+            <div class="it-obs" *ngIf="it.observacoes">{{ it.observacoes }}</div>
+          </div>
+        </div>
+      </div>
+
+      <button *ngIf="c.status !== 'PRONTA'"
+              [class]="btnClass(c.status)"
+              class="ticket-btn"
+              (click)="avancarStatus(c)">
+        {{ btnLabel(c.status) }}
+      </button>
+
+      <div *ngIf="c.status === 'PRONTA'" class="ticket-pronta-msg">
+        ✅ Pronta para entrega
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.coz-layout { min-height:100vh; display:flex; flex-direction:column; background:var(--bg); }
+
+.coz-header {
+  padding:14px 24px;
+  background:var(--bg2);
+  border-bottom:2px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+.header-left { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; }
+.user-name { font-size:14px; font-weight:400; color:var(--text2); }
+.header-right { display:flex; align-items:center; gap:16px; }
+
+.nova-badge {
+  background:var(--accent);
+  color:#fff;
+  padding:6px 14px;
+  border-radius:20px;
+  font-size:14px;
+  font-weight:600;
+  animation: pulse 0.5s ease infinite alternate;
+}
+@keyframes pulse { from { opacity:1; } to { opacity:0.6; } }
+
+.sync-info { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); }
+.sync-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--green);
+  animation: blink 2s ease infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.coz-board {
+  padding:20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+  gap:16px;
+  align-items:start;
+}
+
+.empty-state {
+  grid-column: 1/-1;
+  text-align:center;
+  padding:80px 20px;
+}
+.empty-icon { font-size:64px; margin-bottom:16px; }
+.empty-title { font-size:24px; font-weight:700; margin-bottom:8px; }
+.empty-sub { color:var(--text2); }
+
+.comanda-ticket {
+  background:var(--bg2);
+  border:2px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  transition: border-color .2s;
+}
+.ticket-aberta { border-color:var(--accent); box-shadow:0 0 20px rgba(255,107,53,.1); }
+.ticket-preparo { border-color:var(--yellow); box-shadow:0 0 20px rgba(234,179,8,.1); }
+
+.ticket-header { display:flex; justify-content:space-between; align-items:flex-start; }
+.ticket-id-mesa { display:flex; flex-direction:column; gap:2px; }
+.ticket-id { font-size:12px; color:var(--text2); }
+.ticket-mesa { font-size:22px; font-weight:700; }
+.ticket-meta { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+
+.ticket-tempo { font-size:13px; font-weight:600; }
+.tempo-ok { color:var(--green); }
+.tempo-alerta { color:var(--yellow); }
+.tempo-urgente { color:var(--red); animation: pulse 1s ease infinite alternate; }
+
+.ticket-obs {
+  background:var(--bg3);
+  border-radius:8px;
+  padding:8px 12px;
+  font-size:13px;
+  color:var(--text2);
+  display:flex;
+  gap:6px;
+}
+
+.ticket-itens { display:flex; flex-direction:column; gap:8px; }
+.ticket-item {
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  background:var(--bg3);
+  border-radius:8px;
+  padding:10px 12px;
+}
+.it-qty { font-size:20px; font-weight:700; color:var(--accent); min-width:36px; }
+.it-nome { font-size:15px; font-weight:600; }
+.it-obs { font-size:12px; color:var(--text2); margin-top:2px; }
+
+.ticket-btn { width:100%; padding:12px; font-size:15px; font-weight:600; border-radius:10px; }
+.ticket-pronta-msg {
+  text-align:center;
+  padding:10px;
+  background:rgba(34,197,94,.1);
+  border:1px solid rgba(34,197,94,.3);
+  border-radius:10px;
+  color:var(--green);
+  font-weight:600;
+}
+
+.badge { text-transform:capitalize; }
+</style>
