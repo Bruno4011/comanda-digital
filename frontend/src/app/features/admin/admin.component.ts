@@ -1,233 +1,211 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
-import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './admin.component.html',
-  providers: [DatePipe]
+  templateUrl: './admin.component.html'
 })
 export class AdminComponent implements OnInit, OnDestroy {
+  user = this.auth.getUser();
   tab = 'dashboard';
-  user: any;
-  timer: any;
+  ultimaAtualizacao = '';
 
-  // Dashboard — operacional hoje
+  // Dashboard
   relatorio: any = {};
   comandasAbertas: any[] = [];
   comandasEmPreparo: any[] = [];
   comandasProntas: any[] = [];
-  ultimaAtualizacao = '';
-  dashCarregando = false;
+  mesas: any[] = [];
 
-  // Financeiro — análise por período
-  finRelatorio: any = null;
+  // Financeiro
+  finInicio = '';
+  finFim = '';
   finCarregando = false;
+  finRelatorio: any = null;
   faturamentoDiario: any[] = [];
-  graficoDias = 14;
-  finInicio = new Date(Date.now() - 29 * 86400000).toISOString().split('T')[0];
-  finFim = new Date().toISOString().split('T')[0];
-
-  // Histórico
-  historico: any[] = [];
-  historicoCarregando = false;
-  historicoErro = '';
-  dataInicio = new Date().toISOString().split('T')[0];
-  dataFim = new Date().toISOString().split('T')[0];
+  graficoDias = 7;
+  private maxFaturamento = 0;
+  private maxProdQty = 0;
 
   // Produtos
   produtos: any[] = [];
   categorias: any[] = [];
-  novoProduto: any = { nome: '', descricao: '', preco: 0, categoriaId: null, disponivel: true, imagemUrl: '' };
   editando: any = null;
+  novoProduto: any = { nome: '', descricao: '', preco: 0, categoriaId: null, disponivel: true, imagemUrl: '' };
   produtoErro = '';
   produtoSucesso = '';
 
-  // Mesas
-  mesas: any[] = [];
+  // Histórico
+  dataInicio = '';
+  dataFim = '';
+  historico: any[] = [];
+  historicoCarregando = false;
+  historicoErro = '';
+  totalHistorico = 0;
+  historicoCanceladas = 0;
 
-  constructor(private auth: AuthService, private api: ApiService) {
-    this.user = auth.getUser();
-  }
+  private interval: any;
+
+  constructor(private auth: AuthService, private api: ApiService) {}
 
   ngOnInit() {
+    const hoje = new Date();
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    this.finInicio = fmt(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+    this.finFim = fmt(hoje);
+    this.dataInicio = fmt(new Date(hoje.getTime() - 7 * 86400000));
+    this.dataFim = fmt(hoje);
     this.loadDashboard();
-    // Timer criado UMA vez aqui, não dentro de loadDashboard
-    this.timer = setInterval(() => {
-      if (this.tab === 'dashboard') this.refreshDashboard();
-    }, 10000);
+    this.loadProdutos();
+    this.loadMesas();
+    this.interval = setInterval(() => this.loadDashboard(), 30000);
   }
-  ngOnDestroy() { clearInterval(this.timer); }
 
+  ngOnDestroy() { clearInterval(this.interval); }
+
+  setTab(t: string) { this.tab = t; }
+
+  logout() { this.auth.logout(); }
+
+  // Dashboard
   loadDashboard() {
-    this.dashCarregando = true;
-    this.refreshDashboard();
-  }
-
-  refreshDashboard() {
-    forkJoin({
-      relatorio: this.api.getRelatorioHoje(),
-      abertas: this.api.getComandasAbertas(),
-      emPreparo: this.api.getComandasEmPreparo(),
-      prontas: this.api.getComandasProntas()
-    }).subscribe({
-      next: ({ relatorio, abertas, emPreparo, prontas }) => {
-        this.relatorio = relatorio;
-        this.comandasAbertas = abertas;
-        this.comandasEmPreparo = emPreparo;
-        this.comandasProntas = prontas;
-        this.ultimaAtualizacao = new Date().toLocaleTimeString('pt-BR');
-        this.dashCarregando = false;
-      },
-      error: () => this.dashCarregando = false
-    });
-  }
-
-  setTab(t: string) {
-    this.tab = t;
-    if (t === 'dashboard') this.refreshDashboard();
-    if (t === 'financeiro') this.loadFinanceiro();
-    if (t === 'produtos') this.loadProdutos();
-    if (t === 'mesas') this.loadMesas();
-    if (t === 'historico') this.buscarHistorico();
-  }
-
-  // FINANCEIRO
-  loadFinanceiro() {
-    this.finCarregando = true;
-    forkJoin({
-      relatorio: this.api.getRelatorioPeriodo(this.finInicio, this.finFim),
-      grafico: this.api.getFaturamentoDiario(this.graficoDias)
-    }).subscribe({
-      next: ({ relatorio, grafico }) => {
-        this.finRelatorio = relatorio;
-        this.faturamentoDiario = grafico;
-        this.finCarregando = false;
-      },
-      error: () => this.finCarregando = false
-    });
-  }
-
-  buscarFinanceiro() { this.loadFinanceiro(); }
-
-  setGraficoDias(d: number) {
-    this.graficoDias = d;
-    this.api.getFaturamentoDiario(d).subscribe(g => this.faturamentoDiario = g);
-  }
-
-  // PRODUTOS
-  loadProdutos() {
-    this.api.getProdutos().subscribe(p => this.produtos = p);
-    this.api.getCategorias().subscribe(c => this.categorias = c);
-  }
-
-  salvarProduto() {
-    this.produtoErro = '';
-    this.produtoSucesso = '';
-    if (!this.novoProduto.nome?.trim()) { this.produtoErro = 'Nome é obrigatório.'; return; }
-    if (!this.novoProduto.preco || this.novoProduto.preco <= 0) { this.produtoErro = 'Preço deve ser maior que zero.'; return; }
-    if (!this.novoProduto.categoriaId) { this.produtoErro = 'Selecione uma categoria.'; return; }
-    const obs = this.editando
-      ? this.api.atualizarProduto(this.editando.id, this.novoProduto)
-      : this.api.criarProduto(this.novoProduto);
-    obs.subscribe({
-      next: () => {
-        this.loadProdutos();
-        this.novoProduto = { nome: '', descricao: '', preco: 0, categoriaId: null, disponivel: true, imagemUrl: '' };
-        this.editando = null;
-        this.produtoSucesso = 'Produto salvo com sucesso!';
-        setTimeout(() => this.produtoSucesso = '', 3000);
-      },
-      error: (err) => {
-        const msg = err?.error?.erro || err?.error?.message || 'Erro desconhecido';
-        this.produtoErro = 'Erro: ' + msg;
-      }
-    });
-  }
-
-  editarProduto(p: any) {
-    this.editando = p;
-    this.novoProduto = { nome: p.nome, descricao: p.descricao, preco: p.preco, categoriaId: p.categoria.id, disponivel: p.disponivel, imagemUrl: p.imagemUrl || '' };
-  }
-
-  deletarProduto(id: number) {
-    if (confirm('Excluir produto?')) this.api.deletarProduto(id).subscribe(() => this.loadProdutos());
-  }
-
-  finalizarComanda(id: number) {
-    this.api.atualizarStatusComanda(id, 'FINALIZADA').subscribe(() => this.refreshDashboard());
+    this.ultimaAtualizacao = new Date().toLocaleTimeString('pt-BR');
+    this.api.getRelatorioHoje().subscribe({ next: (r: any) => this.relatorio = r, error: () => {} });
+    this.api.getComandasAbertas().subscribe({ next: (r: any[]) => this.comandasAbertas = r, error: () => {} });
+    this.api.getComandasEmPreparo().subscribe({ next: (r: any[]) => this.comandasEmPreparo = r, error: () => {} });
+    this.api.getComandasProntas().subscribe({ next: (r: any[]) => this.comandasProntas = r, error: () => {} });
+    this.loadMesas();
   }
 
   loadMesas() {
-    this.api.getMesas().subscribe(m => this.mesas = m.sort((a: any, b: any) => a.numero - b.numero));
+    this.api.getMesas().subscribe({ next: (r: any[]) => this.mesas = r, error: () => {} });
+  }
+
+  finalizarComanda(id: number) {
+    this.api.atualizarStatusComanda(id, 'FINALIZADA').subscribe({ next: () => this.loadDashboard(), error: () => {} });
   }
 
   toggleMesa(m: any) {
     const novoStatus = m.status === 'LIVRE' ? 'OCUPADA' : 'LIVRE';
-    this.api.atualizarStatusMesa(m.id, novoStatus).subscribe(() => this.loadMesas());
+    this.api.atualizarStatusMesa(m.id, novoStatus).subscribe({ next: () => this.loadMesas(), error: () => {} });
   }
 
-  // HISTÓRICO
-  buscarHistorico() {
-    this.historicoCarregando = true;
-    this.historicoErro = '';
-    this.historico = [];
-    this.api.getHistorico(this.dataInicio, this.dataFim).subscribe({
-      next: h => { this.historico = h; this.historicoCarregando = false; if (!h.length) this.historicoErro = 'Nenhuma comanda encontrada.'; },
-      error: () => { this.historicoCarregando = false; this.historicoErro = 'Erro ao buscar histórico.'; }
+  tempoAberta(data: string): string {
+    if (!data) return '';
+    const diff = Math.floor((Date.now() - new Date(data).getTime()) / 60000);
+    if (diff < 60) return `${diff}min`;
+    return `${Math.floor(diff / 60)}h${diff % 60}min`;
+  }
+
+  tempoClass(data: string): string {
+    if (!data) return '';
+    const diff = Math.floor((Date.now() - new Date(data).getTime()) / 60000);
+    if (diff > 30) return 'ops-tempo tempo-urgente';
+    if (diff > 15) return 'ops-tempo tempo-alerta';
+    return 'ops-tempo tempo-ok';
+  }
+
+  // Financeiro
+  buscarFinanceiro() {
+    this.finCarregando = true;
+    this.finRelatorio = null;
+    this.api.getRelatorioPeriodo(this.finInicio, this.finFim).subscribe({
+      next: (r: any) => {
+        this.finRelatorio = r;
+        this.finCarregando = false;
+        this.maxProdQty = r.topProdutos?.[0]?.quantidade || 0;
+        this.setGraficoDias(this.graficoDias);
+      },
+      error: () => { this.finCarregando = false; }
     });
   }
 
-  // Helpers gráfico
-  get maxFaturamento(): number {
-    return Math.max(...this.faturamentoDiario.map(d => Number(d.faturamento)), 1);
+  setGraficoDias(dias: number) {
+    this.graficoDias = dias;
+    this.api.getFaturamentoDiario(dias).subscribe({
+      next: (r: any[]) => {
+        this.faturamentoDiario = r;
+        this.maxFaturamento = r.reduce((a, b) => Math.max(a, b.faturamento), 0);
+      },
+      error: () => {}
+    });
   }
+
   barHeight(val: number): number {
-    return Math.round((Number(val) / this.maxFaturamento) * 100);
-  }
-  get maxQtdProduto(): number {
-    if (!this.finRelatorio?.topProdutos?.length) return 1;
-    return Math.max(...this.finRelatorio.topProdutos.map((p: any) => Number(p.quantidade)));
-  }
-  prodBarWidth(q: number): number {
-    return Math.round((q / this.maxQtdProduto) * 100);
+    return this.maxFaturamento > 0 ? Math.max(2, (val / this.maxFaturamento) * 100) : 0;
   }
 
-  // Helpers operacionais
-  tempoAberta(dt: any): string {
-    if (!dt) return '';
-    const diff = Math.floor((Date.now() - new Date(dt).getTime()) / 60000);
-    if (diff < 1) return 'agora';
-    if (diff < 60) return diff + 'min';
-    return Math.floor(diff / 60) + 'h' + (diff % 60 > 0 ? (diff % 60) + 'min' : '');
-  }
-  tempoClass(dt: any): string {
-    const diff = Math.floor((Date.now() - new Date(dt).getTime()) / 60000);
-    if (diff >= 20) return 'tempo-urgente';
-    if (diff >= 10) return 'tempo-alerta';
-    return 'tempo-ok';
+  prodBarWidth(qty: number): number {
+    return this.maxProdQty > 0 ? (qty / this.maxProdQty) * 100 : 0;
   }
 
-  get totalHistorico(): number {
-    return this.historico.filter(c => c.status === 'FINALIZADA').reduce((s, c) => s + Number(c.total), 0);
-  }
-  get historicoCanceladas(): number {
-    return this.historico.filter(c => c.status === 'CANCELADA').length;
+  // Produtos
+  loadProdutos() {
+    this.api.getProdutos().subscribe({ next: (r: any[]) => this.produtos = r, error: () => {} });
+    this.api.getCategorias().subscribe({ next: (r: any[]) => this.categorias = r, error: () => {} });
   }
 
-  statusClass(s: string) {
-    return ({ ABERTA: 'badge-orange', EM_PREPARO: 'badge-yellow', PRONTA: 'badge-blue', FINALIZADA: 'badge-green', CANCELADA: 'badge-red' } as any)[s] || '';
+  editarProduto(p: any) {
+    this.editando = p;
+    this.novoProduto = { nome: p.nome, descricao: p.descricao, preco: p.preco, categoriaId: p.categoria?.id ?? null, disponivel: p.disponivel, imagemUrl: p.imagemUrl || '' };
   }
-  formatData(dt: any): string {
-    if (!dt) return '-';
-    try { return new Date(dt).toLocaleString('pt-BR'); } catch { return '-'; }
+
+  salvarProduto() {
+    this.produtoErro = ''; this.produtoSucesso = '';
+    const req = this.editando
+      ? this.api.atualizarProduto(this.editando.id, this.novoProduto)
+      : this.api.criarProduto(this.novoProduto);
+    req.subscribe({
+      next: () => {
+        this.produtoSucesso = this.editando ? 'Produto atualizado!' : 'Produto criado!';
+        this.editando = null;
+        this.novoProduto = { nome: '', descricao: '', preco: 0, categoriaId: null, disponivel: true, imagemUrl: '' };
+        this.loadProdutos();
+      },
+      error: () => { this.produtoErro = 'Erro ao salvar produto.'; }
+    });
   }
-  logout() { this.auth.logout(); }
-  formatMoeda(v: any) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
-  formatPct(v: any) { return Number(v || 0).toFixed(1) + '%'; }
+
+  deletarProduto(id: number) {
+    if (!confirm('Deletar produto?')) return;
+    this.api.deletarProduto(id).subscribe({ next: () => this.loadProdutos(), error: () => {} });
+  }
+
+  // Histórico
+  buscarHistorico() {
+    this.historicoCarregando = true; this.historicoErro = '';
+    this.api.getHistorico(this.dataInicio, this.dataFim).subscribe({
+      next: (r: any[]) => {
+        this.historico = r;
+        this.totalHistorico = r.reduce((a: number, c: any) => a + (c.total || 0), 0);
+        this.historicoCanceladas = r.filter((c: any) => c.status === 'CANCELADA').length;
+        this.historicoCarregando = false;
+      },
+      error: () => { this.historicoErro = 'Erro ao buscar histórico.'; this.historicoCarregando = false; }
+    });
+  }
+
+  // Formatadores
+  formatMoeda(v: number): string {
+    return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  formatData(d: string): string {
+    if (!d) return '-';
+    return new Date(d).toLocaleString('pt-BR');
+  }
+
+  formatPct(v: number): string {
+    return `${(v || 0).toFixed(1)}%`;
+  }
+
+  statusClass(s: string): string {
+    const m: Record<string, string> = { FINALIZADA: 'badge-green', CANCELADA: 'badge-red', ABERTA: 'badge-yellow', EM_PREPARO: 'badge-yellow' };
+    return m[s] || 'badge-yellow';
+  }
 }

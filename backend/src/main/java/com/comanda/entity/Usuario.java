@@ -13,5 +13,5 @@ public class Usuario {
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Builder.Default @Column(nullable = false) private Boolean ativo = true;
     @Builder.Default @Column(name = "criado_em") private LocalDateTime criadoEm = LocalDateTime.now();
-    public enum Role { ADMIN, GARCOM, COZINHA, COPA, CLIENTE }
+    public enum Role { ADMIN, GARCOM, COZINHA, COPA, PRATO_QUENTE, PRATO_FRIO, CLIENTE }
 }

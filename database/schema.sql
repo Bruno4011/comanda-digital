@@ -11,7 +11,7 @@ CREATE TABLE usuarios (
     nome      VARCHAR(100)  NOT NULL,
     email     VARCHAR(150)  NOT NULL UNIQUE,
     senha     VARCHAR(255)  NOT NULL,
-    role      ENUM('ADMIN','GARCOM','COZINHA','COPA','CLIENTE') NOT NULL DEFAULT 'CLIENTE',
+    role      ENUM('ADMIN','GARCOM','COZINHA','CLIENTE') NOT NULL DEFAULT 'CLIENTE',
     ativo     BOOLEAN       NOT NULL DEFAULT TRUE,
     criado_em DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -75,8 +75,7 @@ INSERT INTO usuarios (nome, email, senha, role) VALUES
     ('Administrador', 'admin@comanda.com',   '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'ADMIN'),
     ('Garçom João',   'garcom@comanda.com',  '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'GARCOM'),
     ('Cozinha',       'cozinha@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'COZINHA'),
-    ('Copa',          'copa@comanda.com',    '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'COPA'),
-('Cliente App',   'cliente@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'CLIENTE');
+    ('Cliente App',   'cliente@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'CLIENTE');
 
 INSERT INTO produtos (nome, descricao, preco, categoria_id, disponivel) VALUES
     ('X-Burguer',       'Pão, carne 180g, queijo, alface, tomate', 18.90, 1, TRUE),

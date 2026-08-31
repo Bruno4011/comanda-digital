@@ -15,7 +15,8 @@ INSERT INTO usuarios (nome, email, senha, role, ativo) VALUES
     ('Administrador', 'admin@comanda.com',   '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'ADMIN',   true),
     ('Garcom',        'garcom@comanda.com',  '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'GARCOM',  true),
     ('Cozinha',       'cozinha@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'COZINHA', true),
-    ('Copa',          'copa@comanda.com',    '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'COPA',    true),
+    ('Prato Quente', 'prato.quente@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'PRATO_QUENTE', true),
+('Prato Frio',   'prato.frio@comanda.com',   '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'PRATO_FRIO',   true),
 ('Cliente App',   'cliente@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'CLIENTE', true)
 ON CONFLICT (email) DO NOTHING;
 
