@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 
-@Component({ selector: 'app-cliente', standalone: true, imports: [CommonModule, FormsModule], templateUrl: './cliente.component.html' })
+@Component({ selector: 'app-cliente', standalone: true, imports: [CommonModule, FormsModule, RouterLink], templateUrl: './cliente.component.html' })
 export class ClienteComponent implements OnInit {
   produtos: any[] = [];
   categorias: any[] = [];
