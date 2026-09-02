@@ -37,6 +37,7 @@ public class DataInitializer implements ApplicationRunner {
         criarUsuario("Administrador","admin@comanda.com",   senha,"ADMIN");
         criarUsuario("Garcom",       "garcom@comanda.com",  senha,"GARCOM");
         criarUsuario("Cozinha",      "cozinha@comanda.com", senha,"COZINHA");
+        criarUsuario("Copa",         "copa@comanda.com",    senha,"COPA");
         criarUsuario("Prato Quente", "prato.quente@comanda.com", senha,"PRATO_QUENTE");
         criarUsuario("Prato Frio",   "prato.frio@comanda.com",   senha,"PRATO_FRIO");
         criarUsuario("Cliente App",  "cliente@comanda.com", senha,"CLIENTE");
@@ -44,15 +45,19 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void criarUsuario(String nome, String email, String senha, String role) {
-        if (usuarioRepo.findByEmail(email).isEmpty()) {
-            Usuario u = new Usuario();
-            u.setNome(nome);
-            u.setEmail(email);
-            u.setSenha(senha);
-            u.setRole(Usuario.Role.valueOf(role));
-            u.setAtivo(true);
-            usuarioRepo.save(u);
-            System.out.println("=== Criado: " + email);
+        try {
+            if (usuarioRepo.findByEmail(email).isEmpty()) {
+                Usuario u = new Usuario();
+                u.setNome(nome);
+                u.setEmail(email);
+                u.setSenha(senha);
+                u.setRole(Usuario.Role.valueOf(role));
+                u.setAtivo(true);
+                usuarioRepo.save(u);
+                System.out.println("=== Criado: " + email);
+            }
+        } catch (Exception e) {
+            System.out.println("=== ERRO ao criar " + email + ": " + e.getMessage());
         }
     }
 }
