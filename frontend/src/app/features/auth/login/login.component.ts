@@ -11,9 +11,11 @@ import { environment } from '../../../../environments/environment';
   templateUrl: './login.component.html'
 })
 export class LoginComponent implements OnInit {
+  private static serverConfirmedAwake = false;
+
   email = ''; senha = ''; erro = ''; loading = false;
-  serverReady = false;
-  serverChecking = true;
+  serverReady = LoginComponent.serverConfirmedAwake;
+  serverChecking = !LoginComponent.serverConfirmedAwake;
   checkAttempt = 0;
   checkMax = 20;
 
@@ -21,11 +23,13 @@ export class LoginComponent implements OnInit {
     if (this.auth.isLoggedIn()) this.redirect(this.auth.getUser()!.role);
   }
 
-  ngOnInit() { this.checkServer(); }
+  ngOnInit() {
+    if (!LoginComponent.serverConfirmedAwake) this.checkServer();
+  }
 
   checkServer() {
     this.http.get(`${environment.apiUrl}/categorias`).subscribe({
-      next: () => { this.serverReady = true; this.serverChecking = false; },
+      next: () => { this.serverReady = true; this.serverChecking = false; LoginComponent.serverConfirmedAwake = true; },
       error: () => {
         this.checkAttempt++;
         if (this.checkAttempt < this.checkMax) setTimeout(() => this.checkServer(), 3000);
@@ -40,7 +44,12 @@ export class LoginComponent implements OnInit {
     this.erro = ''; this.loading = true;
     this.auth.login(this.email, this.senha).subscribe({
       next: (u) => { this.loading = false; this.redirect(u.role); },
-      error: () => { this.loading = false; this.erro = 'Email ou senha inválidos.'; }
+      error: (err) => {
+        this.loading = false;
+        if (err.status === 401 || err.status === 403) this.erro = 'Email ou senha inválidos.';
+        else if (err.status === 0) this.erro = 'Não foi possível conectar ao servidor (verifique CORS_ORIGIN no Render ou sua internet).';
+        else this.erro = `Erro ao entrar (código ${err.status}). Tente novamente.`;
+      }
     });
   }
 
