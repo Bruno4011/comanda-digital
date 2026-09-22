@@ -4,7 +4,7 @@
 
 **Equipe:** Bruno Ramos Castellar — 217792 · Vinícius Lima Silva — 219644
 
-**Aplicação em produção:** `[COLE AQUI A URL DO NETLIFY, ex: https://comanda-digital-xxxx.netlify.app]`
+**Aplicação em produção:** `https://comanda-front.netlify.app`
 
 Sistema de gestão de pedidos para restaurantes: substitui a comanda de papel por um fluxo digital entre quem faz o pedido (cliente na mesa, delivery, ou garçom) e as estações que precisam prepará-lo (cozinha geral, copa, prato quente, prato frio), com um painel administrativo para produtos, mesas e financeiro.
 
