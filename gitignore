@@ -1,0 +1,22 @@
+# --- Segredos / ambiente local ---
+.env
+.env.*
+!.env.example
+
+# --- Frontend (Angular/Node) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/npm-debug.log*
+
+# --- Backend (Java/Maven) ---
+backend/target/
+backend/*.class
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# --- IDE / SO ---
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
