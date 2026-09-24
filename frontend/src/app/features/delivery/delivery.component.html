@@ -76,17 +76,14 @@
         <h3 style="margin-top:16px">Pagamento</h3>
         <div class="pagamento-opcoes">
           <label class="pag-opt" [class.ativo]="endereco.pagamento==='dinheiro'">
-            <input type="radio" [(ngModel)]="endereco.pagamento" value="dinheiro"> 💵 Dinheiro na entrega
+            <input type="radio" [(ngModel)]="endereco.pagamento" value="dinheiro"> 💵 Dinheiro
           </label>
           <label class="pag-opt" [class.ativo]="endereco.pagamento==='cartao'">
             <input type="radio" [(ngModel)]="endereco.pagamento" value="cartao"> 💳 Cartão na entrega
           </label>
           <label class="pag-opt" [class.ativo]="endereco.pagamento==='pix'">
-            <input type="radio" [(ngModel)]="endereco.pagamento" value="pix"> ⚡ PIX (combinar na entrega)
+            <input type="radio" [(ngModel)]="endereco.pagamento" value="pix"> ⚡ PIX
           </label>
-        </div>
-        <div class="aviso-pagamento" style="margin-top:10px;padding:10px 14px;background:#fff3cd;border-left:4px solid #f0ad4e;border-radius:4px;font-size:13px;color:#664d03">
-          ℹ️ O pagamento é combinado direto com o entregador ou o estabelecimento na hora da entrega — este pedido não processa pagamento online.
         </div>
         <div *ngIf="endereco.pagamento === 'dinheiro'" class="form-group" style="margin-top:12px">
           <label>Precisa de troco para quanto?</label>

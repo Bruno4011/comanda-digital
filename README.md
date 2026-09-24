@@ -1,11 +1,5 @@
 # Comanda Digital
 
-> Comanda Digital ajuda donos de pequenos restaurantes e lanchonetes a levar o pedido da mesa até a estação de preparo certa em segundos — sem letra ilegível, sem corrida entre mesas, e sem pagar por um sistema de PDV completo que sobra pro tamanho do negócio.
-
-**Equipe:** Bruno Ramos Castellar — 217792 · Vinícius Lima Silva — 219644
-
-**Aplicação em produção:** `https://comanda-front.netlify.app`
-
 Sistema de gestão de pedidos para restaurantes: substitui a comanda de papel por um fluxo digital entre quem faz o pedido (cliente na mesa, delivery, ou garçom) e as estações que precisam prepará-lo (cozinha geral, copa, prato quente, prato frio), com um painel administrativo para produtos, mesas e financeiro.
 
 ## Stack
@@ -40,7 +34,7 @@ O `Dockerfile` na raiz do repositório builda o backend; o `frontend/netlify.tom
 | Prato Quente | `/prato-quente` | Vê só itens de categorias que casem com prato/lanche/porção/massa/carne/grelhado/sopa |
 | Prato Frio | `/prato-frio` | Vê só itens de categorias que casem com salada/entrada/sushi/frio/ceviche/antepasto |
 | Cliente | `/cliente` | Faz pedido direto pelo celular/tablet na mesa, sem login |
-| Delivery | `/delivery` | Cardápio com cadastro do cliente (nome, telefone, endereço) salvo no banco; na volta, o cliente recupera os dados buscando pelo telefone |
+| Delivery | `/delivery` | Cardápio com fluxo de endereço e forma de pagamento (sem gateway de pagamento real — é só registro) |
 
 Login e senha de todos os papéis internos (menos Cliente/Delivery, que não logam): ver [Credenciais de teste](#credenciais-de-teste).
 
@@ -78,8 +72,6 @@ Sobe em `localhost:4200`, apontando para `environment.ts` (não o `.prod.ts`).
 
 ## Variáveis de ambiente (backend)
 
-Veja `backend/.env.example` para o modelo completo, sem valores reais.
-
 | Variável | Para quê |
 |---|---|
 | `DATABASE_URL` | URL JDBC do Postgres — formato `jdbc:postgresql://host:porta/banco`, não a URI `postgres://` que provedores como Aiven/Render mostram por padrão |
@@ -109,30 +101,9 @@ Todos com senha `admin123`:
 
 Criados automaticamente na primeira subida do backend, por `backend/src/main/java/com/comanda/config/DataInitializer.java`.
 
-## Funcionalidades desta sprint (vs. PRD)
-
-Com base na priorização MoSCoW do PRD:
-
-**Implementado (Must)**
-- Login com papéis (Admin, Garçom, Cozinha, Copa, Prato Quente, Prato Frio)
-- Pedido pelo cliente na mesa sem login, com filtro de cardápio por categoria
-- Pedido pelo garçom vinculado a uma mesa
-- Cadastro de produto (categoria, preço, disponibilidade) pelo Admin
-- Comanda em tempo quase real na Cozinha (tudo) e nas estações filtradas por categoria
-- Avanço de status da comanda (`ABERTA` → `EM_PREPARO` → `PRONTA`)
-- Dashboard do dia (comandas por status, mesas)
-
-**Implementado (Should)**
-- Relatório financeiro por período e histórico de comandas (Admin)
-- Delivery — mas com escopo alterado: em vez de forma de pagamento (não estava no plano original ter isso funcionando de verdade, e a equipe decidiu não simular algo que pareceria processar pagamento sem processar), o fluxo cadastra o cliente (nome, telefone, endereço) no banco, com busca por telefone para pedidos futuros
-
-**Fora desta sprint (Could/Won't, conforme o PRD)**
-- Categoria → estação configurável pela interface (continua fixo no código — ver "Limitações conhecidas")
-- Multi-tenant, pagamento online, integração com marketplace, emissão fiscal, app nativo: mantidos fora de escopo, como já previsto no PRD
-
-
+## Limitações conhecidas
 
 - Prato Frio não recebe pedidos com as categorias padrão (ver seção de roteamento acima).
-- Delivery não trata pagamento: nem seleção de forma, nem cobrança online. O acerto é feito fora do sistema, direto entre cliente e estabelecimento.
+- Delivery registra forma de pagamento escolhida, mas não processa pagamento de verdade — não há integração com gateway.
 - Plano gratuito do Render: backend "dorme" depois de ~15 min sem uso (mitigado pelo UptimeRobot); banco gratuito do Render expira em 30 dias — por isso o banco está na Aiven, que não tem esse limite no plano free.
 - Erros de login genéricos: o backend retorna o mesmo tipo de erro tanto para "usuário não existe" quanto para "senha errada".

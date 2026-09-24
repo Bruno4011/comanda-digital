@@ -78,6 +78,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.api.getRelatorioHoje().subscribe({ next: (r: any) => this.relatorio = r, error: () => {} });
     this.api.getComandasAbertas().subscribe({ next: (r: any[]) => this.comandasAbertas = r, error: () => {} });
     this.api.getComandasEmPreparo().subscribe({ next: (r: any[]) => this.comandasEmPreparo = r, error: () => {} });
+    this.comandasProntas = [];
     this.api.getComandasProntas().subscribe({ next: (r: any[]) => this.comandasProntas = r, error: () => {} });
     this.loadMesas();
   }
