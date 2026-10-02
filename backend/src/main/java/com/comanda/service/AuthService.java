@@ -17,7 +17,7 @@ public class AuthService {
             .orElseThrow(() -> new RuntimeException("Credenciais inválidas"));
         if (!u.getAtivo()) throw new RuntimeException("Usuário inativo");
         if (!encoder.matches(req.getSenha(), u.getSenha()))
-            throw new org.springframework.security.authentication.BadCredentialsException("Credenciais inválidas");
+            throw new RuntimeException("Credenciais inválidas");
         String token = jwtUtil.gerarToken(u.getEmail(), u.getRole().name());
         return new LoginResponse(token, u.getNome(), u.getRole().name(), u.getId());
     }
