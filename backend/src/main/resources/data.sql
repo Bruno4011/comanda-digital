@@ -12,12 +12,12 @@ ON CONFLICT (numero) DO NOTHING;
 
 -- Senha: admin123
 INSERT INTO usuarios (nome, email, senha, role, ativo) VALUES
-    ('Administrador', 'admin@comanda.com',   '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'ADMIN',   true),
-    ('Garcom',        'garcom@comanda.com',  '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'GARCOM',  true),
-    ('Cozinha',       'cozinha@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'COZINHA', true),
-    ('Prato Quente', 'prato.quente@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'PRATO_QUENTE', true),
-('Prato Frio',   'prato.frio@comanda.com',   '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'PRATO_FRIO',   true),
-('Cliente App',   'cliente@comanda.com', '$2a$10$2rOF8Q0AfzYzNvTmcBg1wOxv6ycgnhARgO0Ii3THTV/67/qTwvzqG', 'CLIENTE', true)
+    ('Administrador', 'admin@comanda.com',   '$2a$10$XFlMc8Kv.yP9mwb9IjGmoeyHYpMvzatKbWHuOSlTHU4LrFPaQbr3W', 'ADMIN',   true),
+    ('Garcom',        'garcom@comanda.com',  '$2a$10$elq3BwKVOaJImz5BUx262.ByMs6atRHOzSZQRRoi1jqgVnVge1lS6', 'GARCOM',  true),
+    ('Cozinha',       'cozinha@comanda.com', '$2a$10$ROMf5ZnyGoAd6Ja90Rr73uP6cFyCBf4FgJ5AYBsq.UMf3QOuQ9SoK', 'COZINHA', true),
+    ('Prato Quente', 'prato.quente@comanda.com', '$2a$10$gXZ4UZrA8UOJ452BbQmkcu3Vjbp081IoMw1./IaHYVQxOEzpFBz3G', 'PRATO_QUENTE', true),
+('Prato Frio',   'prato.frio@comanda.com',   '$2a$10$V8tgeCeA0jiOdJ1caimaPOhcf39Iu/jzbEtzLbT2nDMMpdm9/0.7q', 'PRATO_FRIO',   true),
+('Cliente App',   'cliente@comanda.com', '$2a$10$X12m/tR02Webcqla4Q31FOusvWFOj/cyWlQHyT0SMmJDvYkTBvw76', 'CLIENTE', true)
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO produtos (nome, descricao, preco, categoria_id, disponivel)

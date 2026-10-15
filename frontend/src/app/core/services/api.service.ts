@@ -31,4 +31,9 @@ export class ApiService {
   getHistorico(dataInicio: string, dataFim: string) { return this.http.get<any[]>(`${this.base}/relatorios/historico`, { params: { dataInicio, dataFim } }); }
   getRelatorioPeriodo(dataInicio: string, dataFim: string) { return this.http.get<any>(`${this.base}/relatorios/periodo`, { params: { dataInicio, dataFim } }); }
   getFaturamentoDiario(dias: number = 7) { return this.http.get<any[]>(`${this.base}/relatorios/faturamento-diario`, { params: { dias: dias.toString() } }); }
-}
+  // Usuários
+  getUsuarios() { return this.http.get<any[]>(`${this.base}/admin/usuarios`); }
+  criarUsuario(u: any) { return this.http.post<any>(`${this.base}/admin/usuarios`, u); }
+  atualizarUsuario(id: number, u: any) { return this.http.put<any>(`${this.base}/admin/usuarios/${id}`, u); }
+  deletarUsuario(id: number) { return this.http.delete<any>(`${this.base}/admin/usuarios/${id}`); }
+  toggleUsuario(id: number) { return this.http.patch<any>(`${this.base}/admin/usuarios/${id}/toggle`, {}); }

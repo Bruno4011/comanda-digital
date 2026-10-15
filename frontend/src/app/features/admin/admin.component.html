@@ -7,6 +7,7 @@
       <button [class.active]="tab==='produtos'"   (click)="setTab('produtos')">🍔 Produtos</button>
       <button [class.active]="tab==='mesas'"      (click)="setTab('mesas')">🪑 Mesas</button>
       <button [class.active]="tab==='historico'"  (click)="setTab('historico')">📋 Histórico</button>
+      <button [class.active]="tab==='usuarios'"   (click)="setTab('usuarios')">👥 Usuários</button>
     </nav>
     <div class="sb-user">
       <div class="sb-user-name">{{ user?.nome }}</div>
@@ -402,6 +403,111 @@
       </div>
     </div>
 
+
+    <!-- ===== USUÁRIOS ===== -->
+    <div *ngIf="tab==='usuarios'" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">👥 Gestão de Usuários</h2>
+          <div class="page-subtitle">Crie, edite ou desative acessos ao sistema</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:24px">
+
+        <!-- FORMULÁRIO -->
+        <div class="card">
+          <h3 style="margin-bottom:16px">{{ editandoUsuario ? '✏️ Editar Usuário' : '➕ Novo Usuário' }}</h3>
+
+          <div class="form-group">
+            <label>Nome completo</label>
+            <input [(ngModel)]="novoUsuario.nome" placeholder="Nome do usuário">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="novoUsuario.email" placeholder="email@restaurante.com"
+                   [disabled]="editandoUsuario?.role === 'ADMIN'">
+          </div>
+          <div class="form-group">
+            <label>{{ editandoUsuario ? 'Nova Senha (deixe em branco para manter)' : 'Senha' }}</label>
+            <input type="password" [(ngModel)]="novoUsuario.senha"
+                   [placeholder]="editandoUsuario ? 'Digite para alterar...' : 'Senha de acesso'">
+          </div>
+          <div class="form-group">
+            <label>Função / Setor</label>
+            <select [(ngModel)]="novoUsuario.role" [disabled]="editandoUsuario?.role === 'ADMIN'">
+              <option *ngFor="let r of roles" [value]="r">{{ roleLabel(r) }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="novoUsuario.ativo" [disabled]="editandoUsuario?.role === 'ADMIN'">
+              <option [ngValue]="true">Ativo</option>
+              <option [ngValue]="false">Inativo</option>
+            </select>
+          </div>
+
+          <div *ngIf="usuarioErro" class="alert alert-error" style="margin-bottom:12px">❌ {{ usuarioErro }}</div>
+          <div *ngIf="usuarioSucesso" class="alert alert-success" style="margin-bottom:12px">✅ {{ usuarioSucesso }}</div>
+
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" (click)="salvarUsuario()">
+              {{ editandoUsuario ? 'Salvar Alterações' : 'Criar Usuário' }}
+            </button>
+            <button *ngIf="editandoUsuario" class="btn-secondary" (click)="cancelarEdicaoUsuario()">
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- LISTA DE USUÁRIOS -->
+        <div class="card" style="overflow-y:auto;max-height:620px">
+          <div *ngIf="usuarioCarregando" class="loading">Carregando usuários...</div>
+
+          <div class="usuario-item" *ngFor="let u of usuarios"
+               [class.usuario-inativo]="!u.ativo"
+               [class.usuario-admin]="u.role === 'ADMIN'">
+
+            <div class="usuario-avatar">
+              {{ u.nome?.charAt(0)?.toUpperCase() }}
+            </div>
+
+            <div class="usuario-info">
+              <div class="usuario-nome">
+                {{ u.nome }}
+                <span *ngIf="u.role === 'ADMIN'" class="usuario-crown">👑</span>
+              </div>
+              <div class="usuario-email">{{ u.email }}</div>
+              <div class="usuario-meta">
+                <span class="badge" [class]="u.ativo ? 'badge-green' : 'badge-red'">
+                  {{ u.ativo ? 'Ativo' : 'Inativo' }}
+                </span>
+                <span class="usuario-role">{{ roleLabel(u.role) }}</span>
+              </div>
+            </div>
+
+            <div class="usuario-acoes">
+              <button class="btn-secondary" style="padding:4px 10px;font-size:12px"
+                      (click)="editarUsuario(u)" title="Editar">✏️</button>
+              <button *ngIf="u.role !== 'ADMIN'"
+                      class="btn-secondary" style="padding:4px 10px;font-size:12px"
+                      (click)="toggleUsuario(u)"
+                      [title]="u.ativo ? 'Desativar' : 'Ativar'">
+                {{ u.ativo ? '🔒' : '🔓' }}
+              </button>
+              <button *ngIf="u.role !== 'ADMIN'"
+                      class="btn-danger" style="padding:4px 10px;font-size:12px"
+                      (click)="deletarUsuario(u)" title="Excluir">🗑️</button>
+            </div>
+          </div>
+
+          <div *ngIf="!usuarioCarregando && usuarios.length === 0" class="empty">
+            Nenhum usuário cadastrado.
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -538,4 +644,21 @@ nav button.active{background:rgba(255,107,53,.12);color:var(--accent);font-weigh
 .grid-4{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
 @media(max-width:1100px){.ops-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.grid-2{grid-template-columns:1fr}.ops-grid{grid-template-columns:1fr}.sidebar{width:180px}}
+
+.usuario-item{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--border);transition:background .15s}
+.usuario-item:hover{background:var(--bg3)}
+.usuario-item:last-child{border-bottom:none}
+.usuario-inativo{opacity:.5}
+.usuario-admin{background:rgba(255,107,53,.04)}
+.usuario-avatar{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.usuario-admin .usuario-avatar{background:linear-gradient(135deg,var(--accent),#ff8c42)}
+.usuario-info{flex:1;min-width:0}
+.usuario-nome{font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px}
+.usuario-crown{font-size:14px}
+.usuario-email{font-size:12px;color:var(--text2);margin-top:2px}
+.usuario-meta{display:flex;align-items:center;gap:8px;margin-top:4px}
+.usuario-role{font-size:11px;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:20px}
+.usuario-acoes{display:flex;gap:4px;flex-shrink:0}
+.alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);padding:10px 16px;border-radius:8px;font-size:14px}
+
 </style>

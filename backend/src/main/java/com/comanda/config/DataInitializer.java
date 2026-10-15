@@ -33,14 +33,21 @@ public class DataInitializer implements ApplicationRunner {
                 mesaRepo.save(m);
             }
         }
-        String senha = passwordEncoder.encode("admin123");
-        criarUsuario("Administrador","admin@comanda.com",   senha,"ADMIN");
-        criarUsuario("Garcom",       "garcom@comanda.com",  senha,"GARCOM");
-        criarUsuario("Cozinha",      "cozinha@comanda.com", senha,"COZINHA");
-        criarUsuario("Copa",         "copa@comanda.com",    senha,"COPA");
-        criarUsuario("Prato Quente", "prato.quente@comanda.com", senha,"PRATO_QUENTE");
-        criarUsuario("Prato Frio",   "prato.frio@comanda.com",   senha,"PRATO_FRIO");
-        criarUsuario("Cliente App",  "cliente@comanda.com", senha,"CLIENTE");
+        // Senhas individuais por usuario
+        String senhaAdmin       = passwordEncoder.encode("admin123");
+        String senhaGarcom      = passwordEncoder.encode("garcom123");
+        String senhaCozinha     = passwordEncoder.encode("cozinha123");
+        String senhaCopa        = passwordEncoder.encode("copa123");
+        String senhaPratoQuente = passwordEncoder.encode("prato.quente123");
+        String senhaPratoFrio   = passwordEncoder.encode("prato.frio123");
+        String senhaCliente     = passwordEncoder.encode("cliente123");
+        criarUsuario("Administrador","admin@comanda.com",   senhaAdmin,"ADMIN");
+        criarUsuario("Garcom",       "garcom@comanda.com",  senhaGarcom,"GARCOM");
+        criarUsuario("Cozinha",      "cozinha@comanda.com", senhaCozinha,"COZINHA");
+        criarUsuario("Copa",         "copa@comanda.com",    senhaCopa,"COPA");
+        criarUsuario("Prato Quente", "prato.quente@comanda.com", senhaPratoQuente,"PRATO_QUENTE");
+        criarUsuario("Prato Frio",   "prato.frio@comanda.com",   senhaPratoFrio,"PRATO_FRIO");
+        criarUsuario("Cliente App",  "cliente@comanda.com", senhaCliente,"CLIENTE");
         System.out.println("=== DataInitializer: dados verificados ===");
     }
 

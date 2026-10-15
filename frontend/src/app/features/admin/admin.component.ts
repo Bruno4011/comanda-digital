@@ -82,6 +82,68 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadMesas();
   }
 
+  loadUsuarios() {
+    this.usuarioCarregando = true;
+    this.api.getUsuarios().subscribe({
+      next: u => { this.usuarios = u; this.usuarioCarregando = false; },
+      error: () => this.usuarioCarregando = false
+    });
+  }
+
+  salvarUsuario() {
+    this.usuarioErro = '';
+    this.usuarioSucesso = '';
+    if (!this.novoUsuario.nome?.trim()) { this.usuarioErro = 'Nome é obrigatório.'; return; }
+    if (!this.novoUsuario.email?.trim()) { this.usuarioErro = 'Email é obrigatório.'; return; }
+    if (!this.editandoUsuario && !this.novoUsuario.senha?.trim()) { this.usuarioErro = 'Senha é obrigatória.'; return; }
+
+    const obs = this.editandoUsuario
+      ? this.api.atualizarUsuario(this.editandoUsuario.id, this.novoUsuario)
+      : this.api.criarUsuario(this.novoUsuario);
+
+    obs.subscribe({
+      next: () => {
+        this.loadUsuarios();
+        this.novoUsuario = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
+        this.editandoUsuario = null;
+        this.usuarioSucesso = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
+        setTimeout(() => this.usuarioSucesso = '', 3000);
+      },
+      error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao salvar usuário.'; }
+    });
+  }
+
+  editarUsuario(u: any) {
+    this.editandoUsuario = u;
+    this.novoUsuario = { nome: u.nome, email: u.email, senha: '', role: u.role, ativo: u.ativo };
+    this.usuarioErro = '';
+  }
+
+  cancelarEdicaoUsuario() {
+    this.editandoUsuario = null;
+    this.novoUsuario = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
+    this.usuarioErro = '';
+  }
+
+  deletarUsuario(u: any) {
+    if (u.role === 'ADMIN') { this.usuarioErro = 'Não é possível excluir o administrador.'; return; }
+    if (!confirm('Excluir usuário ' + u.nome + '?')) return;
+    this.api.deletarUsuario(u.id).subscribe({
+      next: () => { this.loadUsuarios(); this.usuarioSucesso = 'Usuário excluído.'; setTimeout(() => this.usuarioSucesso = '', 3000); },
+      error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao excluir.'; }
+    });
+  }
+
+  toggleUsuario(u: any) {
+    if (u.role === 'ADMIN') return;
+    this.api.toggleUsuario(u.id).subscribe({ next: () => this.loadUsuarios(), error: () => {} });
+  }
+
+  roleLabel(r: string) {
+    const m: Record<string,string> = { ADMIN:'Administrador', GARCOM:'Garçom', COZINHA:'Cozinha', COPA:'Copa', PRATO_QUENTE:'Prato Quente', PRATO_FRIO:'Prato Frio', CLIENTE:'Cliente' };
+    return m[r] || r;
+  }
+
   loadMesas() {
     this.api.getMesas().subscribe({ next: (r: any[]) => this.mesas = r, error: () => {} });
   }
