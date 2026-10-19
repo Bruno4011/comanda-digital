@@ -49,6 +49,15 @@ export class AdminComponent implements OnInit, OnDestroy {
   totalHistorico = 0;
   historicoCanceladas = 0;
 
+  // Usuários
+  usuarios: any[] = [];
+  usuarioCarregando = false;
+  usuarioErro = '';
+  usuarioSucesso = '';
+  editandoUsuario: any = null;
+  novoUsuario: any = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
+  roles: string[] = ['ADMIN', 'GARCOM', 'COZINHA', 'COPA', 'PRATO_QUENTE', 'PRATO_FRIO', 'CLIENTE'];
+
   private interval: any;
 
   constructor(private auth: AuthService, private api: ApiService) {}
@@ -63,6 +72,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadDashboard();
     this.loadProdutos();
     this.loadMesas();
+    this.loadUsuarios();
     this.interval = setInterval(() => this.loadDashboard(), 30000);
   }
 
@@ -103,10 +113,10 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     obs.subscribe({
       next: () => {
+        this.usuarioSucesso = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
         this.loadUsuarios();
         this.novoUsuario = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
         this.editandoUsuario = null;
-        this.usuarioSucesso = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
         setTimeout(() => this.usuarioSucesso = '', 3000);
       },
       error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao salvar usuário.'; }
