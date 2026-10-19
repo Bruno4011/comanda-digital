@@ -49,6 +49,15 @@ export class AdminComponent implements OnInit, OnDestroy {
   totalHistorico = 0;
   historicoCanceladas = 0;
 
+  // Usuários
+  usuarios: any[] = [];
+  usuarioCarregando = false;
+  editandoUsuario: any = null;
+  novoUsuario: any = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
+  usuarioErro = '';
+  usuarioSucesso = '';
+  roles: string[] = ['ADMIN', 'GARCOM', 'COZINHA', 'COPA', 'PRATO_QUENTE', 'PRATO_FRIO', 'CLIENTE'];
+
   private interval: any;
 
   constructor(private auth: AuthService, private api: ApiService) {}
@@ -63,6 +72,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadDashboard();
     this.loadProdutos();
     this.loadMesas();
+    this.loadUsuarios();
     this.interval = setInterval(() => this.loadDashboard(), 30000);
   }
 
@@ -85,7 +95,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   loadUsuarios() {
     this.usuarioCarregando = true;
     this.api.getUsuarios().subscribe({
-      next: u => { this.usuarios = u; this.usuarioCarregando = false; },
+      next: (u: any[]) => { this.usuarios = u; this.usuarioCarregando = false; },
       error: () => this.usuarioCarregando = false
     });
   }
@@ -103,13 +113,13 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     obs.subscribe({
       next: () => {
+        this.usuarioSucesso = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
         this.loadUsuarios();
         this.novoUsuario = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
         this.editandoUsuario = null;
-        this.usuarioSucesso = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
         setTimeout(() => this.usuarioSucesso = '', 3000);
       },
-      error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao salvar usuário.'; }
+      error: (err: any) => { this.usuarioErro = err?.error?.erro || 'Erro ao salvar usuário.'; }
     });
   }
 
@@ -130,7 +140,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     if (!confirm('Excluir usuário ' + u.nome + '?')) return;
     this.api.deletarUsuario(u.id).subscribe({
       next: () => { this.loadUsuarios(); this.usuarioSucesso = 'Usuário excluído.'; setTimeout(() => this.usuarioSucesso = '', 3000); },
-      error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao excluir.'; }
+      error: (err: any) => { this.usuarioErro = err?.error?.erro || 'Erro ao excluir.'; }
     });
   }
 

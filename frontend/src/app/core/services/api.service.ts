@@ -37,3 +37,4 @@ export class ApiService {
   atualizarUsuario(id: number, u: any) { return this.http.put<any>(`${this.base}/admin/usuarios/${id}`, u); }
   deletarUsuario(id: number) { return this.http.delete<any>(`${this.base}/admin/usuarios/${id}`); }
   toggleUsuario(id: number) { return this.http.patch<any>(`${this.base}/admin/usuarios/${id}/toggle`, {}); }
+}
