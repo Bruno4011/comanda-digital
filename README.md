@@ -93,8 +93,8 @@ Frontend no Netlify (`Base directory: frontend`, `Build command: npm run build`,
 | Garçom | garcom@comanda.com | `garcom123` |
 | Cozinha | cozinha@comanda.com | `cozinha123` |
 | Copa | copa@comanda.com | `copa123` |
-| Prato Quente | prato.quente@comanda.com | `prato.quente123` |
-| Prato Frio | prato.frio@comanda.com | `prato.frio123` |
+| Prato Quente | prato.quente@comanda.com | `pratoq123` |
+| Prato Frio | prato.frio@comanda.com | `pratof123` |
 | Cliente (app interno) | cliente@comanda.com | `cliente123` |
 
 Criados automaticamente na primeira subida do backend, por `backend/src/main/java/com/comanda/config/DataInitializer.java`.
