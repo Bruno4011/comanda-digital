@@ -87,17 +87,15 @@ Frontend no Netlify (`Base directory: frontend`, `Build command: npm run build`,
 
 ## Credenciais de teste
 
-Todos com senha `admin123`:
-
-| Papel | E-mail |
-|---|---|
-| Admin | admin@comanda.com |
-| Garçom | garcom@comanda.com |
-| Cozinha | cozinha@comanda.com |
-| Copa | copa@comanda.com |
-| Prato Quente | prato.quente@comanda.com |
-| Prato Frio | prato.frio@comanda.com |
-| Cliente (app interno) | cliente@comanda.com |
+| Papel | E-mail | Senha |
+|---|---|---|
+| Admin | admin@comanda.com | `admin123` |
+| Garçom | garcom@comanda.com | `garcom123` |
+| Cozinha | cozinha@comanda.com | `cozinha123` |
+| Copa | copa@comanda.com | `copa123` |
+| Prato Quente | prato.quente@comanda.com | `prato.quente123` |
+| Prato Frio | prato.frio@comanda.com | `prato.frio123` |
+| Cliente (app interno) | cliente@comanda.com | `cliente123` |
 
 Criados automaticamente na primeira subida do backend, por `backend/src/main/java/com/comanda/config/DataInitializer.java`.
 
