@@ -30,14 +30,14 @@ fun ProductListScreen(viewModel: ProductViewModel = viewModel()) {
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
             Text("Lista de Produtos da Comanda Digital")
-            // Implementação da lista...
+            // A lista de itens ficaria aqui...
         }
 
         if (mostrarDialogo) {
             AlertDialog(
                 onDismissRequest = { mostrarDialogo = false },
                 title = { Text("Confirmar Exclusão") },
-                text = { Text("Tem certeza que deseja excluir ${produtosSelecionados.size} produto(s)?") },
+                text = { Text("Tem certeza que deseja excluir ${produtosSelecionados.size} item(s)?") },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.excluirProdutosEmMassa(produtosSelecionados.toList())
