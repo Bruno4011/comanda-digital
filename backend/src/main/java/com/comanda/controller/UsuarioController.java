@@ -14,6 +14,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UsuarioController {
 
+    /** Usuário usado nos pedidos de clientes/delivery (sem login). Não pode ser alterado nem excluído. */
+    private static final String EMAIL_SISTEMA = "cliente@comanda.com";
+
+    private static boolean ehUsuarioSistema(Usuario u) {
+        return u.getEmail() != null && EMAIL_SISTEMA.equalsIgnoreCase(u.getEmail());
+    }
+
     private final UsuarioRepository usuarioRepo;
     private final PasswordEncoder passwordEncoder;
 
@@ -49,6 +56,8 @@ public class UsuarioController {
     public ResponseEntity<Usuario> atualizar(@PathVariable Long id, @RequestBody UsuarioRequest req) {
         Usuario u = usuarioRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        if (ehUsuarioSistema(u))
+            throw new RuntimeException("Este é o usuário do sistema (pedidos de clientes) e não pode ser alterado.");
 
         if (req.getNome() != null && !req.getNome().isBlank())
             u.setNome(req.getNome().trim());
@@ -76,6 +85,8 @@ public class UsuarioController {
             .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
         if (u.getRole() == Usuario.Role.ADMIN)
             throw new RuntimeException("Não é possível excluir o administrador.");
+        if (ehUsuarioSistema(u))
+            throw new RuntimeException("Este é o usuário do sistema (pedidos de clientes) e não pode ser excluído.");
         usuarioRepo.deleteById(id);
         return ResponseEntity.ok(Map.of("mensagem", "Usuário excluído com sucesso."));
     }
@@ -86,6 +97,8 @@ public class UsuarioController {
             .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
         if (u.getRole() == Usuario.Role.ADMIN)
             throw new RuntimeException("Não é possível desativar o administrador.");
+        if (ehUsuarioSistema(u))
+            throw new RuntimeException("Este é o usuário do sistema (pedidos de clientes) e não pode ser desativado.");
         u.setAtivo(!u.getAtivo());
         return ResponseEntity.ok(usuarioRepo.save(u));
     }

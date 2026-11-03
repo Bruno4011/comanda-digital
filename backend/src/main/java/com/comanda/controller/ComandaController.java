@@ -32,6 +32,18 @@ public class ComandaController {
     public ResponseEntity<ItemComanda> addItem(@PathVariable Long id, @RequestBody ComandaRequest.ItemRequest req) {
         return ResponseEntity.ok(comandaService.adicionarItem(id, req));
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> deletar(@PathVariable Long id) {
+        comandaService.deletar(id);
+        return ResponseEntity.ok(Map.of("mensagem", "Comanda excluída."));
+    }
+
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Map<String, Object>> deletarVarias(@RequestBody Map<String, List<Long>> body) {
+        int n = comandaService.deletarVarias(body.get("ids"));
+        return ResponseEntity.ok(Map.<String, Object>of("excluidas", n, "mensagem", n + " comanda(s) excluída(s)."));
+    }
+
     @GetMapping("/itens/pendentes") public List<ItemComanda> itensPendentes() { return comandaService.itensPendentes(); }
     @PatchMapping("/itens/{id}/status")
     public ResponseEntity<ItemComanda> statusItem(@PathVariable Long id, @RequestBody Map<String, String> body) {

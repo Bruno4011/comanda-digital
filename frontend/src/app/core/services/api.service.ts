@@ -31,6 +31,9 @@ export class ApiService {
   getHistorico(dataInicio: string, dataFim: string) { return this.http.get<any[]>(`${this.base}/relatorios/historico`, { params: { dataInicio, dataFim } }); }
   getRelatorioPeriodo(dataInicio: string, dataFim: string) { return this.http.get<any>(`${this.base}/relatorios/periodo`, { params: { dataInicio, dataFim } }); }
   getFaturamentoDiario(dias: number = 7) { return this.http.get<any[]>(`${this.base}/relatorios/faturamento-diario`, { params: { dias: dias.toString() } }); }
+  deletarComanda(id: number) { return this.http.delete<any>(`${this.base}/comandas/${id}`); }
+  deletarComandasEmLote(ids: number[]) { return this.http.delete<any>(`${this.base}/comandas/bulk`, { body: { ids } }); }
+
   // Usuários
   getUsuarios() { return this.http.get<any[]>(`${this.base}/admin/usuarios`); }
   criarUsuario(u: any) { return this.http.post<any>(`${this.base}/admin/usuarios`, u); }

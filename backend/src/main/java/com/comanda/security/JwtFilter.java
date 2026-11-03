@@ -23,7 +23,7 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (jwtUtil.validarToken(token)) {
                 String email = jwtUtil.extrairEmail(token);
-                usuarioRepository.findByEmail(email).ifPresent(u -> {
+                usuarioRepository.findByEmail(email).filter(u -> Boolean.TRUE.equals(u.getAtivo())).ifPresent(u -> {
                     var auth = new UsernamePasswordAuthenticationToken(
                         u, null, List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())));
                     SecurityContextHolder.getContext().setAuthentication(auth);

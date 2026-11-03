@@ -33,21 +33,19 @@ public class DataInitializer implements ApplicationRunner {
                 mesaRepo.save(m);
             }
         }
-        // Senhas individuais por usuario
-        String senhaAdmin       = passwordEncoder.encode("admin123");
-        String senhaGarcom      = passwordEncoder.encode("garcom123");
-        String senhaCozinha     = passwordEncoder.encode("cozinha123");
-        String senhaCopa        = passwordEncoder.encode("copa123");
-        String senhaPratoQuente = passwordEncoder.encode("prato.quente123");
-        String senhaPratoFrio   = passwordEncoder.encode("prato.frio123");
-        String senhaCliente     = passwordEncoder.encode("cliente123");
-        criarUsuario("Administrador","admin@comanda.com",   senhaAdmin,"ADMIN");
-        criarUsuario("Garcom",       "garcom@comanda.com",  senhaGarcom,"GARCOM");
-        criarUsuario("Cozinha",      "cozinha@comanda.com", senhaCozinha,"COZINHA");
-        criarUsuario("Copa",         "copa@comanda.com",    senhaCopa,"COPA");
-        criarUsuario("Prato Quente", "prato.quente@comanda.com", senhaPratoQuente,"PRATO_QUENTE");
-        criarUsuario("Prato Frio",   "prato.frio@comanda.com",   senhaPratoFrio,"PRATO_FRIO");
-        criarUsuario("Cliente App",  "cliente@comanda.com", senhaCliente,"CLIENTE");
+        // Usuários padrão: criados SOMENTE na primeira execução (banco ainda sem usuários).
+        // Assim, o que for excluído na aba "Usuários" não volta no próximo reinício do servidor.
+        if (usuarioRepo.count() == 0) {
+            criarUsuario("Administrador", "admin@comanda.com",        passwordEncoder.encode("admin123"),        "ADMIN");
+            criarUsuario("Garcom",        "garcom@comanda.com",       passwordEncoder.encode("garcom123"),       "GARCOM");
+            criarUsuario("Cozinha",       "cozinha@comanda.com",      passwordEncoder.encode("cozinha123"),      "COZINHA");
+            criarUsuario("Copa",          "copa@comanda.com",         passwordEncoder.encode("copa123"),         "COPA");
+            criarUsuario("Prato Quente",  "prato.quente@comanda.com", passwordEncoder.encode("prato.quente123"), "PRATO_QUENTE");
+            criarUsuario("Prato Frio",    "prato.frio@comanda.com",   passwordEncoder.encode("prato.frio123"),   "PRATO_FRIO");
+        }
+        // Usuário do sistema: pedidos de cliente/delivery (sem login) são gravados em nome dele.
+        // Sem ele esses pedidos falham, então é sempre garantido (e protegido contra exclusão).
+        criarUsuario("Cliente App", "cliente@comanda.com", passwordEncoder.encode("cliente123"), "CLIENTE");
         System.out.println("=== DataInitializer: dados verificados ===");
     }
 

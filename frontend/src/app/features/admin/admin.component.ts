@@ -48,15 +48,36 @@ export class AdminComponent implements OnInit, OnDestroy {
   historicoErro = '';
   totalHistorico = 0;
   historicoCanceladas = 0;
+  selecionados: Set<number> = new Set();
+  excluindoLote = false;
+
+  // Pedidos ao vivo (aba Operações): seleção para exclusão em lote
+  selOp: Set<number> = new Set();
+  excluindoOp = false;
+  opErro = '';
+
+  // Tela "Excluir Pedidos" (exclusão em massa de qualquer pedido do banco)
+  exPedidos: any[] = [];
+  exFiltrados: any[] = [];
+  exSelecionados: Set<number> = new Set();
+  exCarregando = false;
+  exExcluindo = false;
+  exErro = '';
+  exSucesso = '';
+  exStatus = 'TODOS';
+  exBusca = '';
+  exDe = '';
+  exAte = '';
+  private exUltimo: number | null = null;
 
   // Usuários
   usuarios: any[] = [];
-  usuarioCarregando = false;
-  editandoUsuario: any = null;
   novoUsuario: any = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
+  editandoUsuario: any = null;
   usuarioErro = '';
   usuarioSucesso = '';
-  roles: string[] = ['ADMIN', 'GARCOM', 'COZINHA', 'COPA', 'PRATO_QUENTE', 'PRATO_FRIO', 'CLIENTE'];
+  usuarioCarregando = false;
+  private rolesCriacao = ['GARCOM', 'COZINHA', 'COPA', 'PRATO_QUENTE', 'PRATO_FRIO'];
 
   private interval: any;
 
@@ -72,13 +93,12 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadDashboard();
     this.loadProdutos();
     this.loadMesas();
-    this.loadUsuarios();
     this.interval = setInterval(() => this.loadDashboard(), 30000);
   }
 
   ngOnDestroy() { clearInterval(this.interval); }
 
-  setTab(t: string) { this.tab = t; }
+  setTab(t: string) { this.tab = t; if (t === 'usuarios') this.loadUsuarios(); if (t === 'excluir') this.exCarregar(); }
 
   logout() { this.auth.logout(); }
 
@@ -95,7 +115,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   loadUsuarios() {
     this.usuarioCarregando = true;
     this.api.getUsuarios().subscribe({
-      next: (u: any[]) => { this.usuarios = u; this.usuarioCarregando = false; },
+      next: u => { this.usuarios = u; this.usuarioCarregando = false; },
       error: () => this.usuarioCarregando = false
     });
   }
@@ -113,13 +133,14 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     obs.subscribe({
       next: () => {
-        this.usuarioSucesso = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
+        const msg = this.editandoUsuario ? 'Usuário atualizado!' : 'Usuário criado!';
         this.loadUsuarios();
         this.novoUsuario = { nome: '', email: '', senha: '', role: 'GARCOM', ativo: true };
         this.editandoUsuario = null;
+        this.usuarioSucesso = msg;
         setTimeout(() => this.usuarioSucesso = '', 3000);
       },
-      error: (err: any) => { this.usuarioErro = err?.error?.erro || 'Erro ao salvar usuário.'; }
+      error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao salvar usuário.'; }
     });
   }
 
@@ -140,13 +161,22 @@ export class AdminComponent implements OnInit, OnDestroy {
     if (!confirm('Excluir usuário ' + u.nome + '?')) return;
     this.api.deletarUsuario(u.id).subscribe({
       next: () => { this.loadUsuarios(); this.usuarioSucesso = 'Usuário excluído.'; setTimeout(() => this.usuarioSucesso = '', 3000); },
-      error: (err: any) => { this.usuarioErro = err?.error?.erro || 'Erro ao excluir.'; }
+      error: (err) => { this.usuarioErro = err?.error?.erro || 'Erro ao excluir.'; }
     });
   }
 
   toggleUsuario(u: any) {
     if (u.role === 'ADMIN') return;
     this.api.toggleUsuario(u.id).subscribe({ next: () => this.loadUsuarios(), error: () => {} });
+  }
+
+  get rolesDisponiveis(): string[] {
+    return this.editandoUsuario?.role === 'ADMIN' ? ['ADMIN', ...this.rolesCriacao] : this.rolesCriacao;
+  }
+
+  /** Usuário usado nos pedidos de clientes/delivery: sem editar, desativar ou excluir. */
+  ehUsuarioSistema(u: any): boolean {
+    return (u?.email || '').toLowerCase() === 'cliente@comanda.com';
   }
 
   roleLabel(r: string) {
@@ -249,8 +279,198 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   // Histórico
+  toggleSelecionado(id: number) {
+    if (this.selecionados.has(id)) this.selecionados.delete(id);
+    else this.selecionados.add(id);
+  }
+
+  get todosSelecionados(): boolean {
+    return this.historico.length > 0 && this.selecionados.size === this.historico.length;
+  }
+
+  selecionarTodos() {
+    if (this.todosSelecionados) {
+      this.selecionados.clear();
+    } else {
+      this.historico.forEach(c => this.selecionados.add(c.id));
+    }
+  }
+
+  excluirSelecionados() {
+    if (this.selecionados.size === 0) return;
+    if (!confirm(`Excluir ${this.selecionados.size} comanda(s) selecionada(s)? Esta ação não pode ser desfeita.`)) return;
+    this.excluindoLote = true;
+    const ids = Array.from(this.selecionados);
+    this.api.deletarComandasEmLote(ids).subscribe({
+      next: () => {
+        this.selecionados.clear();
+        this.excluindoLote = false;
+        this.buscarHistorico();
+      },
+      error: () => { this.excluindoLote = false; this.historicoErro = 'Erro ao excluir comandas.'; }
+    });
+  }
+
+  // ---- Tela "Excluir Pedidos" ----
+  exCarregar() {
+    this.exCarregando = true;
+    this.exErro = '';
+    this.api.getTodasComandas().subscribe({
+      next: (r: any[]) => {
+        this.exPedidos = r;
+        const existentes = new Set(r.map((c: any) => c.id));
+        this.exSelecionados.forEach(id => { if (!existentes.has(id)) this.exSelecionados.delete(id); });
+        this.exAplicarFiltro();
+        this.exCarregando = false;
+      },
+      error: () => { this.exErro = 'Erro ao carregar os pedidos.'; this.exCarregando = false; }
+    });
+  }
+
+  private exSemAcento(s: string): string {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  exResumoItens(c: any): string {
+    return (c.itens || []).map((i: any) => `${i.quantidade}× ${i.produto?.nome ?? 'item'}`).join(', ');
+  }
+
+  exAplicarFiltro() {
+    const busca = this.exSemAcento(this.exBusca.trim());
+    this.exFiltrados = this.exPedidos.filter((c: any) => {
+      if (this.exStatus !== 'TODOS' && c.status !== this.exStatus) return false;
+      const dia = (c.abertaEm || '').substring(0, 10);
+      if (this.exDe && dia < this.exDe) return false;
+      if (this.exAte && dia > this.exAte) return false;
+      if (!busca) return true;
+      const texto = this.exSemAcento(
+        `#${c.id} ${c.mesa ? 'mesa ' + c.mesa.numero : 'balcao'} ${c.status} ${c.usuario?.nome ?? ''} ${c.observacoes ?? ''} ${this.exResumoItens(c)}`);
+      return texto.includes(busca);
+    });
+    this.exUltimo = null;
+  }
+
+  /** Só vale o que está VISÍVEL na lista (filtro atual): o que foi marcado e saiu do filtro não é apagado. */
+  get exSelecionadas(): any[] { return this.exFiltrados.filter(c => this.exSelecionados.has(c.id)); }
+  get exTodosSelecionados(): boolean {
+    return this.exFiltrados.length > 0 && this.exFiltrados.every(c => this.exSelecionados.has(c.id));
+  }
+  get exTotalSelecionado(): number { return this.exSelecionadas.reduce((s, c) => s + (c.total || 0), 0); }
+
+  exSelecionarTodos() {
+    if (this.exTodosSelecionados) this.exFiltrados.forEach(c => this.exSelecionados.delete(c.id));
+    else this.exFiltrados.forEach(c => this.exSelecionados.add(c.id));
+  }
+
+  /** Clique no checkbox; com Shift marca/desmarca todos entre o último clicado e este. */
+  exClique(ev: MouseEvent, id: number) {
+    const ids = this.exFiltrados.map(c => c.id);
+    const marcar = !this.exSelecionados.has(id);
+    if (ev.shiftKey && this.exUltimo !== null && ids.includes(this.exUltimo)) {
+      const a = ids.indexOf(this.exUltimo), b = ids.indexOf(id);
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+        if (marcar) this.exSelecionados.add(ids[i]); else this.exSelecionados.delete(ids[i]);
+      }
+    } else {
+      if (marcar) this.exSelecionados.add(id); else this.exSelecionados.delete(id);
+    }
+    this.exUltimo = id;
+  }
+
+  exExcluir() {
+    const sel = this.exSelecionadas;
+    if (sel.length === 0 || this.exExcluindo) return;
+
+    const rotulos: Record<string, string> = { ABERTA: 'aberta(s)', EM_PREPARO: 'em preparo', PRONTA: 'pronta(s)', FINALIZADA: 'finalizada(s)', CANCELADA: 'cancelada(s)' };
+    const contagem: Record<string, number> = {};
+    sel.forEach(c => { contagem[c.status] = (contagem[c.status] || 0) + 1; });
+    const linhas = Object.keys(contagem).map(s => `  • ${contagem[s]} ${rotulos[s] || s}`).join('\n');
+    const noFinanceiro = (contagem['PRONTA'] || 0) + (contagem['FINALIZADA'] || 0);
+    const naoEntregues = (contagem['ABERTA'] || 0) + (contagem['EM_PREPARO'] || 0) + (contagem['PRONTA'] || 0);
+
+    let msg = `Excluir ${sel.length} pedido(s) do banco de dados?\n\n${linhas}\n\nIsso NÃO pode ser desfeito.`;
+    if (noFinanceiro > 0) msg += `\n⚠ ${noFinanceiro} deles contam no faturamento e vão sair do Financeiro.`;
+    if (naoEntregues > 0) msg += `\n⚠ ${naoEntregues} ainda não foram entregues: somem da cozinha e liberam a mesa.`;
+    if (!confirm(msg)) return;
+
+    if (sel.length > 20) {
+      const digitado = prompt(`Você vai excluir ${sel.length} pedidos.\nPara confirmar, digite EXCLUIR:`);
+      if ((digitado || '').trim().toUpperCase() !== 'EXCLUIR') return;
+    }
+
+    this.exExcluindo = true;
+    this.exErro = '';
+    this.exSucesso = '';
+    const ids = sel.map(c => c.id);
+    this.api.deletarComandasEmLote(ids).subscribe({
+      next: (r: any) => {
+        const n = r?.excluidas ?? ids.length;
+        this.exSelecionados.clear();
+        this.exExcluindo = false;
+        this.exSucesso = `${n} pedido(s) excluído(s).`;
+        setTimeout(() => this.exSucesso = '', 6000);
+        this.exCarregar();
+        this.loadDashboard();
+      },
+      error: (err: any) => {
+        this.exExcluindo = false;
+        this.exErro = err?.error?.erro || 'Erro ao excluir os pedidos.';
+        this.exCarregar();
+      }
+    });
+  }
+
+  // ---- Operações: exclusão em lote dos pedidos ao vivo ----
+  get todosAoVivo(): any[] {
+    return [...this.comandasAbertas, ...this.comandasEmPreparo, ...this.comandasProntas];
+  }
+
+  /** Só conta/apaga o que está VISÍVEL: se um pedido marcado sumiu da lista (ex.: foi finalizado), ele fica de fora. */
+  get selOpIds(): number[] {
+    const vivos = new Set(this.todosAoVivo.map(c => c.id));
+    return Array.from(this.selOp).filter(id => vivos.has(id));
+  }
+
+  get todosOpSelecionados(): boolean {
+    const todos = this.todosAoVivo;
+    return todos.length > 0 && todos.every(c => this.selOp.has(c.id));
+  }
+
+  toggleSelOp(id: number) {
+    if (this.selOp.has(id)) this.selOp.delete(id); else this.selOp.add(id);
+  }
+
+  selecionarTodosOp() {
+    if (this.todosOpSelecionados) this.selOp.clear();
+    else this.todosAoVivo.forEach(c => this.selOp.add(c.id));
+  }
+
+  excluirSelecionadosOp() {
+    const ids = this.selOpIds;
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} pedido(s) em andamento?\n\nEles somem da cozinha/copa, as mesas são liberadas e isso NÃO pode ser desfeito.`)) return;
+    this.excluindoOp = true;
+    this.opErro = '';
+    this.api.deletarComandasEmLote(ids).subscribe({
+      next: () => { this.selOp.clear(); this.excluindoOp = false; this.loadDashboard(); },
+      error: (err) => { this.excluindoOp = false; this.opErro = err?.error?.erro || 'Erro ao excluir pedidos.'; this.loadDashboard(); }
+    });
+  }
+
+  excluirUma(id: number) {
+    if (!confirm('Excluir esta comanda?')) return;
+    this.api.deletarComanda(id).subscribe({
+      next: () => {
+        this.selecionados.delete(id);
+        this.buscarHistorico();
+      },
+      error: () => { this.historicoErro = 'Erro ao excluir comanda.'; }
+    });
+  }
+
   buscarHistorico() {
     this.historicoCarregando = true; this.historicoErro = '';
+    this.selecionados.clear();
     this.api.getHistorico(this.dataInicio, this.dataFim).subscribe({
       next: (r: any[]) => {
         this.historico = r;

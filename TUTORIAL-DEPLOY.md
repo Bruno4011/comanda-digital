@@ -168,17 +168,19 @@ Isso mantém o backend sempre acordado, sem custo.
 
 ## Passo 8 — Testar
 
-Abra a URL do Netlify. Os usuários abaixo já vêm cadastrados automaticamente (senha `admin123` para todos):
+Abra a URL do Netlify. Os usuários abaixo são criados automaticamente **na primeira execução** (banco vazio). Cada um tem a sua senha (o nome do e-mail + `123`):
 
-| Papel | E-mail |
-|---|---|
-| Admin | admin@comanda.com |
-| Garçom | garcom@comanda.com |
-| Cozinha | cozinha@comanda.com |
-| Copa | copa@comanda.com |
-| Prato Quente | prato.quente@comanda.com |
-| Prato Frio | prato.frio@comanda.com |
-| Cliente | cliente@comanda.com |
+| Papel | E-mail | Senha |
+|---|---|---|
+| Admin | admin@comanda.com | `admin123` |
+| Garçom | garcom@comanda.com | `garcom123` |
+| Cozinha | cozinha@comanda.com | `cozinha123` |
+| Copa | copa@comanda.com | `copa123` |
+| Prato Quente | prato.quente@comanda.com | `prato.quente123` |
+| Prato Frio | prato.frio@comanda.com | `prato.frio123` |
+| Cliente (sistema) | cliente@comanda.com | não faz login: é o usuário interno dos pedidos de clientes/delivery |
+
+Depois da primeira execução, o que você excluir na aba **Usuários** não volta no reinício do servidor.
 
 Entre como admin, confira o cadastro de produtos e mesas, e teste abrir uma comanda pelo fluxo do cliente pra ver se ela aparece do outro lado, na cozinha. Se isso for rodar de verdade num restaurante, vale trocar essas senhas depois do primeiro acesso.
 

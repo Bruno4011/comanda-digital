@@ -7,6 +7,7 @@
       <button [class.active]="tab==='produtos'"   (click)="setTab('produtos')">🍔 Produtos</button>
       <button [class.active]="tab==='mesas'"      (click)="setTab('mesas')">🪑 Mesas</button>
       <button [class.active]="tab==='historico'"  (click)="setTab('historico')">📋 Histórico</button>
+      <button [class.active]="tab==='excluir'"    (click)="setTab('excluir')">🗑️ Excluir Pedidos</button>
       <button [class.active]="tab==='usuarios'"   (click)="setTab('usuarios')">👥 Usuários</button>
     </nav>
     <div class="sb-user">
@@ -55,6 +56,22 @@
         </div>
       </div>
 
+      <div *ngIf="opErro" class="alert alert-error" style="margin-bottom:12px">{{ opErro }}</div>
+      <div class="selecao-bar" *ngIf="todosAoVivo.length > 0" [class.selecao-ativa]="selOpIds.length > 0">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <input type="checkbox" id="selectAllOps" [checked]="todosOpSelecionados" (change)="selecionarTodosOp()"
+                 style="width:18px;height:18px;cursor:pointer">
+          <label for="selectAllOps" style="cursor:pointer;font-size:14px;font-weight:600">
+            {{ todosOpSelecionados ? 'Desmarcar todos' : 'Selecionar todos os pedidos' }}
+          </label>
+          <span *ngIf="selOpIds.length > 0" class="selecao-count">{{ selOpIds.length }} selecionado(s)</span>
+        </div>
+        <button *ngIf="selOpIds.length > 0" class="btn-danger" style="padding:8px 18px;font-size:13px;font-weight:600"
+                (click)="excluirSelecionadosOp()" [disabled]="excluindoOp">
+          {{ excluindoOp ? 'Excluindo...' : '🗑️ Excluir ' + selOpIds.length + ' selecionado(s)' }}
+        </button>
+      </div>
+
       <div class="ops-grid" [class.ops-grid-4]="comandasProntas.length > 0">
 
         <!-- ABERTAS -->
@@ -64,9 +81,12 @@
             <span class="ops-count">{{ comandasAbertas.length }}</span>
           </div>
           <div *ngIf="!comandasAbertas.length" class="empty" style="padding:24px">Nenhuma comanda aguardando.</div>
-          <div class="ops-item" *ngFor="let c of comandasAbertas">
+          <div class="ops-item" [class.op-selecionado]="selOp.has(c.id)" *ngFor="let c of comandasAbertas">
             <div class="ops-item-top">
-              <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" [checked]="selOp.has(c.id)" (change)="toggleSelOp(c.id)" style="width:16px;height:16px;cursor:pointer">
+                <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</div>
+              </div>
               <span class="ops-tempo" [class]="tempoClass(c.abertaEm)">⏱ {{ tempoAberta(c.abertaEm) }}</span>
             </div>
             <div class="ops-itens">
@@ -86,9 +106,12 @@
             <span class="ops-count ops-count-yellow">{{ comandasEmPreparo.length }}</span>
           </div>
           <div *ngIf="!comandasEmPreparo.length" class="empty" style="padding:24px">Nenhuma em preparo.</div>
-          <div class="ops-item ops-item-preparo" *ngFor="let c of comandasEmPreparo">
+          <div class="ops-item ops-item-preparo" [class.op-selecionado]="selOp.has(c.id)" *ngFor="let c of comandasEmPreparo">
             <div class="ops-item-top">
-              <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" [checked]="selOp.has(c.id)" (change)="toggleSelOp(c.id)" style="width:16px;height:16px;cursor:pointer">
+                <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</div>
+              </div>
               <span class="ops-tempo" [class]="tempoClass(c.abertaEm)">⏱ {{ tempoAberta(c.abertaEm) }}</span>
             </div>
             <div class="ops-itens">
@@ -107,9 +130,12 @@
             <h3>✅ Prontas para Entrega</h3>
             <span class="ops-count" style="background:var(--blue)">{{ comandasProntas.length }}</span>
           </div>
-          <div class="ops-item" style="border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.04)" *ngFor="let c of comandasProntas">
+          <div class="ops-item" [class.op-selecionado]="selOp.has(c.id)" style="border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.04)" *ngFor="let c of comandasProntas">
             <div class="ops-item-top">
-              <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcao' }}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" [checked]="selOp.has(c.id)" (change)="toggleSelOp(c.id)" style="width:16px;height:16px;cursor:pointer">
+                <div class="ops-mesa">{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcao' }}</div>
+              </div>
               <span class="ops-tempo tempo-ok">⏱ {{ tempoAberta(c.abertaEm) }}</span>
             </div>
             <div class="ops-itens">
@@ -384,25 +410,131 @@
       </div>
       <div *ngIf="historicoErro && !historicoCarregando" class="alert alert-error">{{ historicoErro }}</div>
       <div *ngIf="historicoCarregando" class="loading">Buscando...</div>
-      <div class="card" *ngIf="historico.length > 0">
-        <table>
-          <thead><tr><th>#</th><th>Mesa</th><th>Usuário</th><th>Status</th><th>Itens</th><th>Total</th><th>Abertura</th><th>Fechamento</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let c of historico">
-              <td class="mono">#{{ c.id }}</td>
-              <td>{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</td>
-              <td>{{ c.usuario?.nome }}</td>
-              <td><span class="badge" [class]="statusClass(c.status)">{{ c.status }}</span></td>
-              <td>{{ c.itens?.length || 0 }}</td>
-              <td><strong>{{ formatMoeda(c.total) }}</strong></td>
-              <td class="text-muted">{{ formatData(c.abertaEm) }}</td>
-              <td class="text-muted">{{ c.fechadaEm ? formatData(c.fechadaEm) : '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div *ngIf="historico.length > 0">
+        <div class="selecao-bar" [class.selecao-ativa]="selecionados.size > 0">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <input type="checkbox" id="selectAll" [checked]="todosSelecionados" (change)="selecionarTodos()"
+                   style="width:18px;height:18px;cursor:pointer">
+            <label for="selectAll" style="cursor:pointer;font-size:14px;font-weight:600">
+              {{ todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos' }}
+            </label>
+            <span *ngIf="selecionados.size > 0" class="selecao-count">{{ selecionados.size }} selecionada(s)</span>
+          </div>
+          <button *ngIf="selecionados.size > 0" class="btn-danger" style="padding:8px 18px;font-size:13px;font-weight:600"
+                  (click)="excluirSelecionados()" [disabled]="excluindoLote">
+            {{ excluindoLote ? 'Excluindo...' : '🗑️ Excluir ' + selecionados.size + ' selecionada(s)' }}
+          </button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th style="width:40px"></th><th>#</th><th>Mesa</th><th>Usuário</th><th>Status</th><th>Itens</th><th>Total</th><th>Abertura</th><th>Fechamento</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of historico" [class.linha-selecionada]="selecionados.has(c.id)">
+                <td><input type="checkbox" [checked]="selecionados.has(c.id)" (change)="toggleSelecionado(c.id)"
+                           style="width:16px;height:16px;cursor:pointer"></td>
+                <td class="mono">#{{ c.id }}</td>
+                <td>{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</td>
+                <td>{{ c.usuario?.nome }}</td>
+                <td><span class="badge" [class]="statusClass(c.status)">{{ c.status }}</span></td>
+                <td>{{ c.itens?.length || 0 }}</td>
+                <td><strong>{{ formatMoeda(c.total) }}</strong></td>
+                <td class="text-muted">{{ formatData(c.abertaEm) }}</td>
+                <td class="text-muted">{{ c.fechadaEm ? formatData(c.fechadaEm) : '-' }}</td>
+                <td><button class="btn-danger" style="padding:3px 8px;font-size:12px" (click)="excluirUma(c.id)" title="Excluir esta comanda">🗑️</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
+
+    <!-- ===== EXCLUIR PEDIDOS (em massa) ===== -->
+    <div *ngIf="tab==='excluir'" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">🗑️ Excluir Pedidos em Massa</h2>
+          <div class="page-subtitle">Todos os pedidos do banco de dados ({{ exPedidos.length }}). Marque os que quer apagar ou use "Selecionar todos".</div>
+        </div>
+        <button class="btn-secondary" (click)="exCarregar()" [disabled]="exCarregando">↻ Atualizar</button>
+      </div>
+
+      <div class="alert alert-error" style="margin-bottom:12px">
+        ⚠️ Excluir apaga o pedido <strong>e os itens</strong> do banco, sem como desfazer. Pedidos prontos e finalizados também saem do Financeiro.
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="ex-filtros">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Status</label>
+            <select [ngModel]="exStatus" (ngModelChange)="exStatus = $event; exAplicarFiltro()">
+              <option value="TODOS">Todos</option>
+              <option value="ABERTA">Abertas</option>
+              <option value="EM_PREPARO">Em preparo</option>
+              <option value="PRONTA">Prontas</option>
+              <option value="FINALIZADA">Finalizadas</option>
+              <option value="CANCELADA">Canceladas</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>De</label>
+            <input type="date" [ngModel]="exDe" (ngModelChange)="exDe = $event; exAplicarFiltro()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Até</label>
+            <input type="date" [ngModel]="exAte" (ngModelChange)="exAte = $event; exAplicarFiltro()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Buscar</label>
+            <input [ngModel]="exBusca" (ngModelChange)="exBusca = $event; exAplicarFiltro()" placeholder="# do pedido, mesa, cliente, item...">
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="exErro" class="alert alert-error" style="margin-bottom:12px">❌ {{ exErro }}</div>
+      <div *ngIf="exSucesso" class="alert alert-success" style="margin-bottom:12px">✅ {{ exSucesso }}</div>
+      <div *ngIf="exCarregando" class="loading">Carregando pedidos...</div>
+      <div *ngIf="!exCarregando && exFiltrados.length === 0" class="empty">Nenhum pedido encontrado com esses filtros.</div>
+
+      <div *ngIf="exFiltrados.length > 0">
+        <div class="selecao-bar" [class.selecao-ativa]="exSelecionadas.length > 0">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <input type="checkbox" id="exSelectAll" [checked]="exTodosSelecionados" (change)="exSelecionarTodos()"
+                   style="width:18px;height:18px;cursor:pointer">
+            <label for="exSelectAll" style="cursor:pointer;font-size:14px;font-weight:600">
+              {{ exTodosSelecionados ? 'Desmarcar todos' : 'Selecionar todos (' + exFiltrados.length + ')' }}
+            </label>
+            <span *ngIf="exSelecionadas.length > 0" class="selecao-count">{{ exSelecionadas.length }} selecionado(s) · {{ formatMoeda(exTotalSelecionado) }}</span>
+          </div>
+          <button *ngIf="exSelecionadas.length > 0" class="btn-danger" style="padding:8px 18px;font-size:13px;font-weight:600"
+                  (click)="exExcluir()" [disabled]="exExcluindo">
+            {{ exExcluindo ? 'Excluindo...' : '🗑️ Excluir ' + exSelecionadas.length + ' selecionado(s)' }}
+          </button>
+        </div>
+        <div class="ex-dica">Dica: marque um pedido, segure <strong>Shift</strong> e marque outro para selecionar todos os que estão entre eles.</div>
+
+        <div class="card">
+          <table>
+            <thead>
+              <tr><th style="width:40px"></th><th>#</th><th>Mesa</th><th>Status</th><th>Itens</th><th>Total</th><th>Abertura</th><th>Responsável</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of exFiltrados" [class.linha-selecionada]="exSelecionados.has(c.id)">
+                <td><input type="checkbox" [checked]="exSelecionados.has(c.id)" (click)="exClique($event, c.id)"
+                           style="width:16px;height:16px;cursor:pointer"></td>
+                <td class="mono">#{{ c.id }}</td>
+                <td>{{ c.mesa ? 'Mesa ' + c.mesa.numero : 'Balcão' }}</td>
+                <td><span class="badge" [class]="statusClass(c.status)">{{ c.status }}</span></td>
+                <td><div class="ex-itens" [title]="exResumoItens(c)">{{ exResumoItens(c) }}</div></td>
+                <td><strong>{{ formatMoeda(c.total) }}</strong></td>
+                <td class="text-muted">{{ formatData(c.abertaEm) }}</td>
+                <td class="text-muted">{{ c.usuario?.nome }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== USUÁRIOS ===== -->
     <div *ngIf="tab==='usuarios'" class="page">
@@ -436,7 +568,7 @@
           <div class="form-group">
             <label>Função / Setor</label>
             <select [(ngModel)]="novoUsuario.role" [disabled]="editandoUsuario?.role === 'ADMIN'">
-              <option *ngFor="let r of roles" [value]="r">{{ roleLabel(r) }}</option>
+              <option *ngFor="let r of rolesDisponiveis" [value]="r">{{ roleLabel(r) }}</option>
             </select>
           </div>
           <div class="form-group">
@@ -483,19 +615,20 @@
                   {{ u.ativo ? 'Ativo' : 'Inativo' }}
                 </span>
                 <span class="usuario-role">{{ roleLabel(u.role) }}</span>
+                <span *ngIf="ehUsuarioSistema(u)" class="usuario-role">usuário do sistema (pedidos de clientes)</span>
               </div>
             </div>
 
             <div class="usuario-acoes">
-              <button class="btn-secondary" style="padding:4px 10px;font-size:12px"
+              <button *ngIf="!ehUsuarioSistema(u)" class="btn-secondary" style="padding:4px 10px;font-size:12px"
                       (click)="editarUsuario(u)" title="Editar">✏️</button>
-              <button *ngIf="u.role !== 'ADMIN'"
+              <button *ngIf="u.role !== 'ADMIN' && !ehUsuarioSistema(u)"
                       class="btn-secondary" style="padding:4px 10px;font-size:12px"
                       (click)="toggleUsuario(u)"
                       [title]="u.ativo ? 'Desativar' : 'Ativar'">
                 {{ u.ativo ? '🔒' : '🔓' }}
               </button>
-              <button *ngIf="u.role !== 'ADMIN'"
+              <button *ngIf="u.role !== 'ADMIN' && !ehUsuarioSistema(u)"
                       class="btn-danger" style="padding:4px 10px;font-size:12px"
                       (click)="deletarUsuario(u)" title="Excluir">🗑️</button>
             </div>
@@ -640,6 +773,15 @@ nav button.active{background:rgba(255,107,53,.12);color:var(--accent);font-weigh
 .mesa-big-num{font-size:18px;font-weight:700;margin-bottom:8px}
 .mesa-toggle-hint{font-size:11px;color:var(--text2);margin-top:8px}
 .text-muted{color:var(--text2);font-size:13px}
+.selecao-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;transition:all .2s}
+.selecao-ativa{border-color:var(--red);background:rgba(239,68,68,.06)}
+.selecao-count{background:var(--red);color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700}
+.linha-selecionada{background:rgba(239,68,68,.06)}
+.linha-selecionada td{border-color:rgba(239,68,68,.2)}
+.ops-item.op-selecionado{outline:2px solid var(--red);outline-offset:-2px}
+.ex-filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.ex-itens{max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text2)}
+.ex-dica{font-size:12px;color:var(--text2);margin:0 2px 10px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr}
 .grid-4{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
 @media(max-width:1100px){.ops-grid{grid-template-columns:1fr 1fr}}

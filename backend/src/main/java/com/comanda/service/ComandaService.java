@@ -101,6 +101,45 @@ public class ComandaService {
         return item;
     }
 
+    @Transactional
+    public void deletar(Long id) {
+        Comanda c = comandaRepo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Comanda não encontrada: " + id));
+        liberarMesaSeAtiva(c);
+        comandaRepo.delete(c);
+    }
+
+    /**
+     * Exclusão em massa: tudo-ou-nada (uma única transação). Ids que já não existem são ignorados.
+     * Devolve quantas comandas foram realmente excluídas.
+     */
+    @Transactional
+    public int deletarVarias(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        List<Long> unicos = ids.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        int total = 0;
+        for (int i = 0; i < unicos.size(); i += 500) {            // lotes de 500 (limite de parâmetros do SQL)
+            List<Long> lote = unicos.subList(i, Math.min(i + 500, unicos.size()));
+            List<Comanda> comandas = comandaRepo.findAllById(lote);
+            for (Comanda c : comandas) liberarMesaSeAtiva(c);
+            comandaRepo.deleteAll(comandas);                      // apaga também os itens (cascade)
+            total += comandas.size();
+        }
+        return total;
+    }
+
+    /** Só comandas ainda ativas ocupam mesa; as finalizadas/canceladas não mexem na mesa. */
+    private void liberarMesaSeAtiva(Comanda c) {
+        if (c.getMesa() != null
+                && c.getStatus() != Comanda.Status.FINALIZADA
+                && c.getStatus() != Comanda.Status.CANCELADA) {
+            mesaRepo.findById(c.getMesa().getId()).ifPresent(mesa -> {
+                mesa.setStatus(Mesa.Status.LIVRE);
+                mesaRepo.save(mesa);
+            });
+        }
+    }
+
     public List<ItemComanda> itensPendentes() { return itemRepo.findByStatus(ItemComanda.Status.PENDENTE); }
 
     @Transactional

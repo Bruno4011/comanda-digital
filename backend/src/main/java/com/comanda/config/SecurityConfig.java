@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/produtos/disponiveis", "/api/categorias").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/comandas").permitAll()
+                // Somente ADMIN: gestão de usuários/produtos, relatórios e exclusão de comandas
+                .requestMatchers("/api/admin/**", "/api/relatorios/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/comandas/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
