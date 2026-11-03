@@ -26,6 +26,7 @@ CREATE TABLE produtos (
     descricao    TEXT,
     preco        DECIMAL(10,2)  NOT NULL,
     categoria_id BIGINT         NOT NULL REFERENCES categorias(id),
+    ativo        BOOLEAN       NOT NULL DEFAULT TRUE,
     disponivel   BOOLEAN        NOT NULL DEFAULT TRUE,
     imagem_url   VARCHAR(500),
     criado_em    TIMESTAMP      NOT NULL DEFAULT NOW()

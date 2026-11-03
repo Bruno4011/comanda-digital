@@ -12,8 +12,8 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepo;
     private final CategoriaRepository categoriaRepo;
 
-    public List<Produto> listarDisponiveis() { return produtoRepo.findByDisponivelTrue(); }
-    public List<Produto> listarTodos() { return produtoRepo.findAll(); }
+    public List<Produto> listarDisponiveis() { return produtoRepo.findByDisponivelTrue().stream().filter(Produto::getAtivo).toList(); }
+    public List<Produto> listarTodos() { return produtoRepo.findAll().stream().filter(Produto::getAtivo).toList(); }
     public List<Categoria> listarCategorias() { return categoriaRepo.findAll(); }
 
     public Produto salvar(ProdutoRequest req) {
@@ -51,5 +51,9 @@ public class ProdutoService {
         return produtoRepo.save(p);
     }
 
-    public void deletar(Long id) { produtoRepo.deleteById(id); }
+    public void deletar(Long id) { 
+        Produto p = produtoRepo.findById(id).orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        p.setAtivo(false);
+        produtoRepo.save(p);
+    }
 }

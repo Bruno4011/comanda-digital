@@ -16,4 +16,6 @@ public class Produto {
     @Builder.Default @Column(nullable = false) private Boolean disponivel = true;
     @Column(name = "imagem_url", length = 500) private String imagemUrl;
     @Builder.Default @Column(name = "criado_em") private LocalDateTime criadoEm = LocalDateTime.now();
+
+    @Builder.Default @Column(nullable = false, columnDefinition = "boolean default true") private Boolean ativo = true;
 }
